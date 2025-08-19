@@ -2,37 +2,53 @@ import dynamic from 'next/dynamic';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
-function randn(mean = 0, std = 1) {
-  // Box-Muller
+// Seeded RNG for reproducible simulations
+function createRng(seedStr = 'zyra') {
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+  let s = (h || 1) >>> 0;
+  return { random(){ s = (1664525 * s + 1013904223) >>> 0; return (s >>> 0) / 0x100000000; } };
+}
+function randn(rng, mean = 0, std = 1) {
+  // Box-Muller with seeded uniforms
   let u = 0, v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
+  while (u === 0) u = rng.random();
+  while (v === 0) v = rng.random();
   return mean + std * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
-
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
-// Ultra-advanced HotStuff-like simulator (simplified, no crypto). Supports view changes and pacemaker jitter.
+// Ultra-advanced HotStuff-like simulator with pacemaker, adversaries, partitions, metrics
 function BFT() {
   const [cfg, setCfg] = useState({
     n: 4,
     f: 1,
-    leaderPolicy: 'round-robin', // or 'sticky'
-    baseLatency: 120, // ms
-    jitter: 40, // ms
-    dropRate: 0.02, // 2%
-    timeout: 1200, // ms per view
+    leaderPolicy: 'round-robin', // 'round-robin' | 'sticky' | 'random' | 'hotshot'
+    baseLatency: 120,
+    jitter: 40,
+    dropRate: 0.02,
+    timeout: 1200,
     optimistic: true,
     byzantine: [], // indices of byz nodes
+    // Adversary knobs (apply to nodes listed in byzantine)
+    byzEquivocate: true,
+    byzVoteDropProb: 0.0,
+    byzVoteDelay: 0,
+    // Partition control
+    partition: { enabled: false, until: 0 }
   });
+  const [seed, setSeed] = useState('zyra');
+  const rngRef = useRef(createRng(seed));
+
   const [running, setRunning] = useState(false);
-  const [speed, setSpeed] = useState(1); // 0.25x - 4x
+  const [speed, setSpeed] = useState(1);
   const [view, setView] = useState(1);
-  const [height, setHeight] = useState(1); // committed height
+  const [height, setHeight] = useState(1);
   const [lockedQC, setLockedQC] = useState(null);
   const [log, setLog] = useState([]);
   const [safety, setSafety] = useState({ equivocations: 0, safetyOk: true });
   const [liveness, setLiveness] = useState({ stalledViews: 0, lastCommitView: 0 });
+  const [metrics, setMetrics] = useState({ sent: 0, dropped: 0, delivered: 0, avgLatency: 0, commits: 0 });
 
   const nodes = useMemo(() => Array.from({ length: cfg.n }, (_, i) => ({
     id: i,
@@ -40,69 +56,74 @@ function BFT() {
     highQC: 0,
     votedView: 0,
     byz: cfg.byzantine.includes(i),
-  })), [cfg]);
+  })), [cfg.n, cfg.byzantine]);
 
-  const eventsRef = useRef([]); // pending network events
+  const eventsRef = useRef([]); // network events
   const tRef = useRef({ now: 0, deadline: cfg.timeout });
   const leaderRef = useRef(0);
-  const stateRef = useRef({
-    view: 1,
-    proposeQC: 0,
-    genVotes: new Set(),
-    preCommitVotes: new Set(),
-    commitVotes: new Set(),
-    chain: [], // {view, blockId}
-  });
+  const lastTimedOutRef = useRef(false);
+  const stateRef = useRef({ view: 1, proposeQC: 0, genVotes: new Set(), preCommitVotes: new Set(), commitVotes: new Set(), chain: [] });
+  const metricsRef = useRef({ sent: 0, dropped: 0, delivered: 0, latencySum: 0, latencyCount: 0, commits: 0 });
 
   useEffect(() => { tRef.current.deadline = cfg.timeout; }, [cfg.timeout]);
+  useEffect(() => { rngRef.current = createRng(seed); }, [seed]);
 
-  function leaderFor(v) {
-    if (cfg.leaderPolicy === 'sticky') return leaderRef.current;
-    return (v - 1) % cfg.n;
-  }
+  function appendLog(line) { setLog((l) => [line, ...l.slice(0, 199)]); }
 
-  function schedule(from, to, type, payload) {
-    if (Math.random() < cfg.dropRate) return; // drop
-    const latency = clamp(
-      randn(cfg.baseLatency, cfg.jitter),
-      Math.max(5, cfg.baseLatency - 3 * cfg.jitter),
-      cfg.baseLatency + 3 * cfg.jitter
-    );
-    const at = tRef.current.now + Math.max(1, latency / speed);
-    eventsRef.current.push({ at, from, to, type, payload });
-  }
-
-  function broadcast(from, type, payload) {
-    for (let to = 0; to < cfg.n; to++) {
-      if (to === from) continue;
-      schedule(from, to, type, payload);
+  // Decide leader for a view with advanced policies
+  function pickLeader(v) {
+    switch (cfg.leaderPolicy) {
+      case 'sticky': return leaderRef.current;
+      case 'random': leaderRef.current = Math.floor(rngRef.current.random() * cfg.n); return leaderRef.current;
+      case 'hotshot':
+        if (lastTimedOutRef.current) leaderRef.current = (leaderRef.current + 1) % cfg.n; // rotate on timeout only
+        return leaderRef.current;
+      case 'round-robin':
+      default: return (v - 1) % cfg.n;
     }
   }
 
-  function appendLog(line) {
-    setLog((l) => [line, ...l.slice(0, 199)]);
-  }
-
   function startView(v) {
-    const leader = leaderFor(v);
-    if (cfg.leaderPolicy === 'sticky') leaderRef.current = leader;
+    const leader = pickLeader(v);
     stateRef.current.view = v;
     stateRef.current.genVotes.clear();
     stateRef.current.preCommitVotes.clear();
     stateRef.current.commitVotes.clear();
     tRef.current.deadline = tRef.current.now + Math.max(50, cfg.timeout / speed);
     appendLog(`▶ view ${v} leader n${leader}`);
-    // leader proposes
     proposeBlock(leader, v);
   }
 
+  function schedule(from, to, type, payload) {
+    // Partition cut (drop cross-group) if enabled
+    if (cfg.partition?.enabled && tRef.current.now < cfg.partition.until) {
+      const groupA = (i) => i < Math.floor(cfg.n / 2);
+      if (groupA(from) !== groupA(to)) { metricsRef.current.sent++; metricsRef.current.dropped++; return; }
+    }
+    // Random drop
+    if (rngRef.current.random() < cfg.dropRate) { metricsRef.current.sent++; metricsRef.current.dropped++; return; }
+    // Base latency with jitter (+ adversarial delays on votes)
+    let latency = clamp(
+      randn(rngRef.current, cfg.baseLatency, cfg.jitter),
+      Math.max(5, cfg.baseLatency - 3 * cfg.jitter),
+      cfg.baseLatency + 3 * cfg.jitter
+    );
+    if (nodes[from]?.byz && /^VOTE/.test(type)) latency += cfg.byzVoteDelay;
+
+    const sentAt = tRef.current.now;
+    const at = sentAt + Math.max(1, latency / speed);
+    eventsRef.current.push({ at, sentAt, from, to, type, payload });
+    metricsRef.current.sent++;
+  }
+
+  function broadcast(from, type, payload) { for (let to = 0; to < cfg.n; to++) { if (to !== from) schedule(from, to, type, payload); } }
+
   function proposeBlock(leader, v) {
-    const blockId = `${v}-${Math.random().toString(36).slice(2, 6)}`;
+    const blockId = `${v}-${Math.floor(rngRef.current.random() * 1e6).toString(36)}`;
     stateRef.current.chain.push({ view: v, blockId });
     const payload = { v, blockId, justifyQC: Math.max(lockedQC || 0, stateRef.current.proposeQC || 0) };
-    // Byzantine leader may equivocate
-    if (nodes[leader].byz) {
-      const blockId2 = `${v}-X${Math.random().toString(36).slice(2, 4)}`;
+    if (nodes[leader].byz && cfg.byzEquivocate) {
+      const blockId2 = `${v}-X${Math.floor(rngRef.current.random() * 1e6).toString(36)}`;
       broadcast(leader, 'PROPOSE', { ...payload, blockId });
       broadcast(leader, 'PROPOSE', { ...payload, blockId: blockId2 });
       setSafety((s) => ({ ...s, equivocations: s.equivocations + 1, safetyOk: false }));
@@ -116,14 +137,15 @@ function BFT() {
     const { v, blockId, justifyQC } = msg.payload;
     const node = nodes[msg.to];
     if (v !== stateRef.current.view) return; // stale
-    // vote if safe (HotStuff safety: v > node.lockedView and justifyQC >= node.lockedView)
     const safe = v > node.lockedView && justifyQC >= node.lockedView;
     if (!safe) return;
     node.highQC = Math.max(node.highQC, justifyQC, v - 1);
     node.votedView = v;
-    // Byzantine node may vote randomly
-    if (node.byz && Math.random() < 0.5) return;
-    schedule(msg.to, leaderFor(v), 'VOTE-GEN', { v, blockId });
+    // Byz node may drop vote
+    if (node.byz && rngRef.current.random() < cfg.byzVoteDropProb) return;
+    schedule(msg.to, pickLeader(v), 'VOTE-GEN', { v, blockId });
+    // Optimistic responsiveness: push deadline forward as progress is made
+    if (cfg.optimistic) tRef.current.deadline = Math.max(tRef.current.deadline, tRef.current.now + (cfg.timeout * 0.6) / speed);
   }
 
   function onVoteGen(msg) {
@@ -131,10 +153,8 @@ function BFT() {
     if (v !== stateRef.current.view) return;
     stateRef.current.genVotes.add(msg.from);
     if (stateRef.current.genVotes.size >= cfg.n - cfg.f) {
-      // got QC for generic phase
       stateRef.current.proposeQC = v;
-      // progress to pre-commit votes
-      broadcast(leaderFor(v), 'VOTE-PRE', { v, blockId });
+      broadcast(pickLeader(v), 'VOTE-PRE', { v, blockId });
     }
   }
 
@@ -142,10 +162,9 @@ function BFT() {
     const { v, blockId } = msg.payload;
     const node = nodes[msg.to];
     if (v !== stateRef.current.view) return;
-    // lock
     node.lockedView = Math.max(node.lockedView, v);
-    if (node.byz && Math.random() < 0.1) return;
-    schedule(msg.to, leaderFor(v), 'VOTE-COMMIT', { v, blockId });
+    if (node.byz && rngRef.current.random() < cfg.byzVoteDropProb * 0.5) return;
+    schedule(msg.to, pickLeader(v), 'VOTE-COMMIT', { v, blockId });
   }
 
   function onVoteCommit(msg) {
@@ -153,32 +172,31 @@ function BFT() {
     if (v !== stateRef.current.view) return;
     stateRef.current.commitVotes.add(msg.from);
     if (stateRef.current.commitVotes.size >= cfg.n - cfg.f) {
-      // commit rule (3-chain simplified): commit v-2, lock v-1
       const newHeight = Math.max(height, v - 1);
       setHeight(newHeight);
       setLockedQC(v);
       setLiveness((L) => ({ ...L, lastCommitView: v }));
+      metricsRef.current.commits++;
       appendLog(`✅ commit at view ${v} (height ≈ ${newHeight})`);
-      // next view
+      lastTimedOutRef.current = false; // successful view
       setTimeout(() => setView((x) => x + 1), 0);
     }
   }
 
-  // Event loop
+  // Event loop with metrics reporting and pacemaker
   useEffect(() => {
     if (!running) return;
-    let raf;
+    let raf; let lastReport = 0;
     const tick = () => {
       tRef.current.now += 16 * speed; // ~60fps
       // timeout / view-change
       if (tRef.current.now > tRef.current.deadline) {
         setLiveness((L) => ({ ...L, stalledViews: L.stalledViews + 1 }));
-        // pacemaker: rotate leader or bump timeout
-        if (cfg.leaderPolicy !== 'sticky') {
-          setView((v) => v + 1);
-        } else {
-          // sticky leader: increase timeout to stabilize
+        lastTimedOutRef.current = true;
+        if (cfg.leaderPolicy === 'sticky') {
           tRef.current.deadline = tRef.current.now + (cfg.timeout * 1.5) / speed;
+        } else {
+          setView((v) => v + 1);
         }
         appendLog(`⏱ view ${stateRef.current.view} timeout → view-change`);
       }
@@ -186,6 +204,9 @@ function BFT() {
       eventsRef.current.sort((a, b) => a.at - b.at);
       while (eventsRef.current.length && eventsRef.current[0].at <= tRef.current.now) {
         const ev = eventsRef.current.shift();
+        metricsRef.current.delivered++;
+        const lat = (tRef.current.now - ev.sentAt);
+        metricsRef.current.latencySum += lat; metricsRef.current.latencyCount++;
         switch (ev.type) {
           case 'PROPOSE': onPropose(ev); break;
           case 'VOTE-GEN': onVoteGen(ev); break;
@@ -193,17 +214,20 @@ function BFT() {
           case 'VOTE-COMMIT': onVoteCommit(ev); break;
         }
       }
+      // periodic metrics state update
+      if (tRef.current.now - lastReport > 250) {
+        lastReport = tRef.current.now;
+        const m = metricsRef.current;
+        setMetrics({ sent: m.sent, dropped: m.dropped, delivered: m.delivered, avgLatency: m.latencyCount? (m.latencySum / m.latencyCount) : 0, commits: m.commits });
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [running, speed, cfg]);
+  }, [running, speed, cfg.leaderPolicy]);
 
   // Start a view when the number changes
-  useEffect(() => {
-    startView(view);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
+  useEffect(() => { startView(view); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [view]);
 
   function reset() {
     eventsRef.current = [];
@@ -213,40 +237,24 @@ function BFT() {
     setLockedQC(null);
     setSafety({ equivocations: 0, safetyOk: true });
     setLiveness({ stalledViews: 0, lastCommitView: 0 });
+    metricsRef.current = { sent: 0, dropped: 0, delivered: 0, latencySum: 0, latencyCount: 0, commits: 0 };
     appendLog('↺ reset');
   }
 
   function applyPreset(name) {
     setRunning(false);
     switch (name) {
-      case 'stable':
-        setCfg({ n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 120, jitter: 10, dropRate: 0.0, timeout: 1000, optimistic: true, byzantine: [] });
-        appendLog('🎛 Preset: Stable network');
-        break;
-      case 'flaky':
-        setCfg({ n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 140, jitter: 80, dropRate: 0.10, timeout: 1500, optimistic: true, byzantine: [] });
-        appendLog('🎛 Preset: Flaky network');
-        break;
-      case 'byz-leader':
-        setCfg({ n: 4, f: 1, leaderPolicy: 'sticky', baseLatency: 120, jitter: 20, dropRate: 0.0, timeout: 1200, optimistic: true, byzantine: [0] });
-        appendLog('🎛 Preset: Byzantine leader (n0)');
-        break;
-      case 'geo-latency':
-        setCfg({ n: 7, f: 2, leaderPolicy: 'round-robin', baseLatency: 600, jitter: 120, dropRate: 0.02, timeout: 2500, optimistic: true, byzantine: [] });
-        appendLog('🎛 Preset: High-latency geo spread');
-        break;
-      case 'stress':
-        setCfg({ n: 10, f: 3, leaderPolicy: 'round-robin', baseLatency: 200, jitter: 200, dropRate: 0.30, timeout: 3000, optimistic: false, byzantine: [] });
-        appendLog('🎛 Preset: Stress (drops + jitter)');
-        break;
+      case 'stable': setCfg({ ...cfg, n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 120, jitter: 10, dropRate: 0.0, timeout: 1000, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }); appendLog('🎛 Preset: Stable network'); break;
+      case 'flaky': setCfg({ ...cfg, n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 140, jitter: 80, dropRate: 0.10, timeout: 1500, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0.1, byzVoteDelay: 0, partition: { enabled:false, until:0 } }); appendLog('🎛 Preset: Flaky network'); break;
+      case 'byz-leader': setCfg({ ...cfg, n: 4, f: 1, leaderPolicy: 'sticky', baseLatency: 120, jitter: 20, dropRate: 0.0, timeout: 1200, optimistic: true, byzantine: [0], byzEquivocate: true, byzVoteDropProb: 0.0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }); appendLog('🎛 Preset: Byzantine leader (n0)'); break;
+      case 'geo-latency': setCfg({ ...cfg, n: 7, f: 2, leaderPolicy: 'round-robin', baseLatency: 600, jitter: 120, dropRate: 0.02, timeout: 2500, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }); appendLog('🎛 Preset: High-latency geo spread'); break;
+      case 'stress': setCfg({ ...cfg, n: 10, f: 3, leaderPolicy: 'round-robin', baseLatency: 200, jitter: 200, dropRate: 0.30, timeout: 3000, optimistic: false, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0.2, byzVoteDelay: 50, partition: { enabled:false, until:0 } }); appendLog('🎛 Preset: Stress (drops + jitter)'); break;
     }
-    reset();
-    setView(1);
-    setRunning(true);
+    reset(); setView(1); setRunning(true);
   }
 
   // UI helpers
-  const leader = leaderFor(view);
+  const leader = pickLeader(view);
   const quorum = cfg.n - cfg.f;
 
   return (
@@ -258,10 +266,13 @@ function BFT() {
         </div>
 
         {/* Controls */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
             <h3 className="font-semibold mb-2">Consensus</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
+              <label className="flex flex-col">Seed
+                <input value={seed} onChange={(e)=>setSeed(e.target.value)} className="mt-1 bg-black/40 border border-white/10 rounded px-2 py-1" />
+              </label>
               <label className="flex flex-col">Nodes (n)
                 <input type="number" min={4} max={50} value={cfg.n}
                   onChange={(e)=>setCfg(c=>({...c, n: Number(e.target.value), f: Math.floor((Number(e.target.value)-1)/3)}))}
@@ -277,11 +288,19 @@ function BFT() {
                   className="mt-1 bg-black/40 border border-white/10 rounded px-2 py-1">
                   <option value="round-robin">Round-robin</option>
                   <option value="sticky">Sticky</option>
+                  <option value="random">Random</option>
+                  <option value="hotshot">Hotshot (rotate on timeout)</option>
                 </select>
               </label>
               <label className="flex items-center gap-2 col-span-2">
                 <input type="checkbox" checked={cfg.optimistic} onChange={(e)=>setCfg(c=>({...c, optimistic:e.target.checked}))} />
                 Optimistic responsiveness
+              </label>
+              <label className="flex flex-col col-span-2">Byzantine nodes (comma-separated)
+                <input value={cfg.byzantine.join(',')} onChange={(e)=>{
+                  const list = e.target.value.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(x=>Number.isFinite(x) && x>=0 && x<cfg.n);
+                  setCfg(c=>({...c, byzantine: Array.from(new Set(list))}));
+                }} className="mt-1 bg-black/40 border border-white/10 rounded px-2 py-1" />
               </label>
             </div>
           </div>
@@ -314,11 +333,36 @@ function BFT() {
                   onChange={(e)=>setSpeed(Number(e.target.value))} />
                 <span className="text-xs text-white/70">{speed.toFixed(2)}x</span>
               </label>
+              <div className="col-span-2 flex gap-2 mt-1">
+                <button onClick={()=>setCfg(c=>({...c, partition:{ enabled:true, until: tRef.current.now + 5000 }}))} className="bg-red-600 hover:bg-red-700 px-3 py-2 rounded">Start Partition 5s</button>
+                <button onClick={()=>setCfg(c=>({...c, partition:{ enabled:false, until: 0 }}))} className="bg-gray-600 hover:bg-gray-700 px-3 py-2 rounded">Clear Partition</button>
+                <div className="text-xs text-white/70 self-center">Partition: {cfg.partition.enabled && tRef.current.now < cfg.partition.until ? 'active' : 'off'}</div>
+              </div>
             </div>
           </div>
 
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <h3 className="font-semibold mb-2">Control</h3>
+            <h3 className="font-semibold mb-2">Adversary</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <label className="flex items-center gap-2 col-span-2">
+                <input type="checkbox" checked={cfg.byzEquivocate} onChange={(e)=>setCfg(c=>({...c, byzEquivocate:e.target.checked}))} />
+                Equivocate proposals (if leader is byzantine)
+              </label>
+              <label className="flex flex-col">Vote drop prob
+                <input type="number" step="0.05" min={0} max={1} value={cfg.byzVoteDropProb}
+                  onChange={(e)=>setCfg(c=>({...c, byzVoteDropProb: clamp(Number(e.target.value), 0, 1)}))}
+                  className="mt-1 bg-black/40 border border-white/10 rounded px-2 py-1" />
+              </label>
+              <label className="flex flex-col">Vote delay (ms)
+                <input type="number" min={0} max={1000} value={cfg.byzVoteDelay}
+                  onChange={(e)=>setCfg(c=>({...c, byzVoteDelay: Math.max(0, Number(e.target.value)||0)}))}
+                  className="mt-1 bg-black/40 border border-white/10 rounded px-2 py-1" />
+              </label>
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <h3 className="font-semibold mb-2">Control & Stats</h3>
             <div className="flex flex-wrap gap-2">
               <button onClick={()=>setRunning(true)} className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded">Start</button>
               <button onClick={()=>setRunning(false)} className="bg-yellow-600 hover:bg-yellow-700 px-3 py-2 rounded">Pause</button>
@@ -330,6 +374,7 @@ function BFT() {
               <div>Height: <span className="font-mono">{height}</span> • LockedQC: <span className="font-mono">{lockedQC ?? '-'}</span></div>
               <div>Safety: <span className={safety.safetyOk? 'text-green-400':'text-red-400'}>{safety.safetyOk? 'OK':'Violated'}</span> (equivocations: {safety.equivocations})</div>
               <div>Liveness: stalled views {liveness.stalledViews}, last commit at view {liveness.lastCommitView}</div>
+              <div className="pt-2 text-xs text-white/80">Msgs sent {metrics.sent} • dropped {metrics.dropped} • delivered {metrics.delivered} • avg latency {metrics.avgLatency.toFixed(1)} ms • commits {metrics.commits}</div>
             </div>
           </div>
         </div>
@@ -380,3 +425,4 @@ function BFT() {
 }
 
 export default dynamic(() => Promise.resolve(BFT), { ssr: false });
+
