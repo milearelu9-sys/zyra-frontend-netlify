@@ -216,6 +216,35 @@ function BFT() {
     appendLog('↺ reset');
   }
 
+  function applyPreset(name) {
+    setRunning(false);
+    switch (name) {
+      case 'stable':
+        setCfg({ n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 120, jitter: 10, dropRate: 0.0, timeout: 1000, optimistic: true, byzantine: [] });
+        appendLog('🎛 Preset: Stable network');
+        break;
+      case 'flaky':
+        setCfg({ n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 140, jitter: 80, dropRate: 0.10, timeout: 1500, optimistic: true, byzantine: [] });
+        appendLog('🎛 Preset: Flaky network');
+        break;
+      case 'byz-leader':
+        setCfg({ n: 4, f: 1, leaderPolicy: 'sticky', baseLatency: 120, jitter: 20, dropRate: 0.0, timeout: 1200, optimistic: true, byzantine: [0] });
+        appendLog('🎛 Preset: Byzantine leader (n0)');
+        break;
+      case 'geo-latency':
+        setCfg({ n: 7, f: 2, leaderPolicy: 'round-robin', baseLatency: 600, jitter: 120, dropRate: 0.02, timeout: 2500, optimistic: true, byzantine: [] });
+        appendLog('🎛 Preset: High-latency geo spread');
+        break;
+      case 'stress':
+        setCfg({ n: 10, f: 3, leaderPolicy: 'round-robin', baseLatency: 200, jitter: 200, dropRate: 0.30, timeout: 3000, optimistic: false, byzantine: [] });
+        appendLog('🎛 Preset: Stress (drops + jitter)');
+        break;
+    }
+    reset();
+    setView(1);
+    setRunning(true);
+  }
+
   // UI helpers
   const leader = leaderFor(view);
   const quorum = cfg.n - cfg.f;
@@ -302,6 +331,18 @@ function BFT() {
               <div>Safety: <span className={safety.safetyOk? 'text-green-400':'text-red-400'}>{safety.safetyOk? 'OK':'Violated'}</span> (equivocations: {safety.equivocations})</div>
               <div>Liveness: stalled views {liveness.stalledViews}, last commit at view {liveness.lastCommitView}</div>
             </div>
+          </div>
+        </div>
+
+        {/* Presets */}
+        <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold mb-3">Presets</h3>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={()=>applyPreset('stable')} className="nav-btn">Stable</button>
+            <button onClick={()=>applyPreset('flaky')} className="nav-btn">Flaky Network</button>
+            <button onClick={()=>applyPreset('byz-leader')} className="nav-btn">Byzantine Leader</button>
+            <button onClick={()=>applyPreset('geo-latency')} className="nav-btn">High Latency Geo</button>
+            <button onClick={()=>applyPreset('stress')} className="nav-btn">Stress</button>
           </div>
         </div>
 
