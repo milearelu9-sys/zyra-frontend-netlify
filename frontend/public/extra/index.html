@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZYRA | Ultra‑Advanced Quantum Blockchain Dashboard</title>
+  <meta name="description" content="ZYRA ultra‑advanced quantum blockchain dashboard with live analytics, DeFi metrics, and adaptive quantum UI." />
+  <meta name="theme-color" content="#0ea5ff" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --q-primary: #00ff95; /* neon green */
+      --q-secondary: #16a34a; /* emerald */
+      --q-accent: #84cc16; /* lime */
+      --q-success: #22c55e;
+      --q-danger: #ef4444;
+      --q-bg-0: #050607; /* near black */
+      --q-bg-1: #0a0f0a; /* black with green hint */
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.10);
+      --glass-border: rgba(255,255,255,0.14);
+      --text: #e8fcea; /* slightly green-tinted white */
+      --text-dim: #a9f5c9;
+      --shadow-q: 0 10px 50px rgba(34,197,94,.25);
+      --grid-line: #b7f5d1;
+      --chart-grid: rgba(74,222,128,.10);
+      --chart-grid-weak: rgba(74,222,128,.06);
+      --chart-tick: #c5ffde;
+      --tooltip-bg: rgba(6,12,10,.92);
+      --tooltip-title: #eafff2;
+      --tooltip-body: #d5ffe8;
+      --tooltip-border: rgba(134,239,172,.25);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 15% 10%, #0b1a12 0%, transparent 60%),
+                  radial-gradient(1000px 900px at 95% 0%, #08140c 0%, transparent 55%),
+                  linear-gradient(180deg, #040605 0%, #040605 100%);
+      background-color: var(--q-bg-0);
+      overflow-x: hidden;
+    }
+
+    /* Animated gradient core */
+    .animated-bg {
+      position: fixed; inset: -20vmax; z-index: -2; filter: blur(80px) saturate(140%); opacity: .5;
+      background: conic-gradient(from 180deg at 50% 50%, var(--q-primary), var(--q-secondary), var(--q-accent), var(--q-primary));
+      animation: swirl 30s linear infinite;
+    }
+    @keyframes swirl { to { transform: rotate(360deg); } }
+
+    /* Particles */
+    .particles { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+    .dot { position: absolute; width: 2px; height: 2px; background: #86efac; border-radius: 999px; opacity: .8; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px);
+      background: linear-gradient(180deg, rgba(8,12,24,.85), rgba(8,12,24,.6));
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: .9rem 1.25rem; display: flex; align-items: center; gap: 1rem; }
+    .brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: var(--text); }
+    .wordmark { font-family: Orbitron, Inter, sans-serif; font-weight: 900; letter-spacing: .12em; }
+    .wordmark span { background: linear-gradient(90deg, var(--q-primary), var(--q-secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+    .logo {
+      width: 44px; height: 44px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: 0 0 0 1px #145532, var(--shadow-q);
+      background: radial-gradient(120% 120% at 10% 10%, #0f2a1a 0%, #0a1510 60%, #070e0a 100%);
+    }
+    .logo::before { content: ''; position: absolute; inset: -40%; background: conic-gradient(from 0deg, transparent 0 40%, #22ff88 50%, transparent 60% 100%); animation: spin 5s linear infinite; filter: blur(6px); opacity: .9; }
+    .logo::after  { content: 'Z'; position: absolute; inset: 0; display: grid; place-items: center; font-family: Orbitron; font-weight: 900; font-size: 22px; color: #eafff2; text-shadow: 0 0 12px #22ff88; letter-spacing: .08em; }
+
+    nav { margin-left: auto; display: flex; gap: .5rem; flex-wrap: wrap; }
+    .nav-btn { position: relative; padding: .55rem .9rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font-weight: 600; letter-spacing: .02em; cursor: pointer; transition: .25s; }
+    .nav-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-q); border-color: #22c55e55; }
+    .nav-btn.active { border-color: #22c55eaa; box-shadow: 0 0 0 1px #22c55e55, var(--shadow-q); background: linear-gradient(180deg, rgba(34,197,94,.12), rgba(34,197,94,.06)); }
+    .nav-btn::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 6px; height: 2px; background: linear-gradient(90deg,var(--q-primary),var(--q-secondary)); transform: scaleX(0); transform-origin: left; transition: transform .25s; opacity: .85; }
+    .nav-btn.active::after { transform: scaleX(1); }
+
+    .wallet { display: flex; align-items: center; gap: .6rem; margin-left: .5rem; }
+    .pill { padding: .45rem .7rem; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); font-family: 'JetBrains Mono', monospace; font-size: .85rem; color: var(--text-dim); }
+    .cta { padding: .6rem 1rem; border-radius: 12px; background: linear-gradient(90deg, var(--q-primary), var(--q-secondary)); border: 0; color: #021412; font-weight: 800; letter-spacing: .04em; cursor: pointer; box-shadow: 0 8px 30px rgba(34,197,94,.35); background-size: 200% 100%; transition: background-position .4s, box-shadow .3s, transform .2s; }
+    .cta:hover { background-position: 100% 0; transform: translateY(-1px); box-shadow: 0 12px 40px rgba(34,197,94,.45); }
+
+    /* Hero */
+    .hero { max-width: 1200px; margin: 2.5rem auto 1rem; padding: 0 1.25rem; display: grid; gap: 1.5rem; align-items: center; }
+    .h-title { font-family: Orbitron, Inter, sans-serif; font-weight: 900; font-size: clamp(2rem, 6vw, 4rem); line-height: 1.1; letter-spacing: .06em; margin: 0; background: linear-gradient(120deg, #eafff2 10%, var(--q-primary) 45%, var(--q-secondary) 60%, #e7ffe3 90%); -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 6s ease-in-out infinite; }
+    @keyframes sheen { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+    .h-sub { color: var(--text-dim); max-width: 70ch; margin: .35rem 0 0; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1rem; margin-top: 1.2rem; }
+    .card { position: relative; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; overflow: hidden; }
+    .card::before { content: ''; position: absolute; inset: -100% -50%; background: radial-gradient(60% 60% at 10% 10%, rgba(74,222,128,.25), transparent 60%); transform: rotate(12deg); opacity: .5; }
+    .metric { font-family: Orbitron; font-weight: 900; font-size: clamp(1.3rem, 3.2vw, 2.2rem); letter-spacing: .04em; color: #e5ffef; }
+    .label { color: var(--text-dim); font-size: .85rem; margin-top: .3rem; }
+
+    /* Grid */
+    .grid { max-width: 1200px; margin: 2rem auto; padding: 0 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .tile { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.1rem; transition: .25s; backdrop-filter: blur(6px); position: relative; }
+    .tile::after { content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none; background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(132,204,22,.18)); opacity: 0; transition: opacity .25s; }
+    .tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-q); }
+    .tile:hover::after { opacity: 1; }
+    .tile h3 { margin: 0 0 .35rem; font-weight: 800; }
+    .tile p { margin: 0; color: var(--text-dim); }
+
+    /* Charts */
+    .viz { max-width: 1200px; margin: 2rem auto 3rem; padding: 0 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+    .chart { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.35); }
+
+    /* Floating controls */
+    .dock { position: fixed; right: 20px; bottom: 22px; display: grid; gap: .6rem; z-index: 40; }
+    .fab { width: 52px; height: 52px; border-radius: 16px; border: 1px solid rgba(34,197,94,.35); background: var(--glass); color: var(--text); font-size: 20px; cursor: pointer; backdrop-filter: blur(8px); transition: .25s; box-shadow: 0 4px 20px rgba(0,0,0,.35); }
+    .fab:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 0 0 1px rgba(34,197,94,.35), 0 8px 30px rgba(34,197,94,.25); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--glass-border);
+      background: linear-gradient(180deg, rgba(8,12,24,.6), rgba(8,12,24,.9));
+      padding: 1.2rem;
+      text-align: center;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    footer button {
+      margin-left: .6rem;
+    }
+
+    /* Auth modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:60}
+    .dialog{width:min(420px,92vw);background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:1rem}
+    .dialog h3{margin:.2rem 0 1rem}
+    .dialog .field{margin:.5rem 0}
+    .dialog .field label{display:block;margin-bottom:.35rem;color:var(--text-dim);font-size:.9rem}
+    .dialog .field input{width:100%;padding:.6rem .7rem;border-radius:12px;border:1px solid var(--glass-border);background:rgba(0,0,0,.25);color:var(--text)}
+
+    /* Toasts */
+    .toasts{position:fixed;right:16px;bottom:16px;display:grid;gap:.5rem;z-index:70}
+    .toast{min-width:260px;max-width:360px;background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(10px);padding:.75rem .9rem;border-radius:12px;display:flex;align-items:flex-start;gap:.6rem;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .toast.success{border-color:rgba(34,197,94,.6)}
+    .toast.error{border-color:rgba(239,68,68,.6)}
+    .toast .t-ico{font-size:18px;line-height:1;margin-top:2px}
+    .toast .t-msg{flex:1}
+    .toast .t-close{background:transparent;border:0;color:var(--text-dim);cursor:pointer}
+
+    /* Presale status bar */
+    .prebar{position:sticky;top:64px;z-index:45;background:linear-gradient(180deg, rgba(8,12,24,.65), rgba(8,12,24,.35));backdrop-filter:blur(8px);border-bottom:1px solid var(--glass-border)}
+    .prebar .inner{max-width:1200px;margin:0 auto;padding:.5rem 1.25rem;display:flex;gap:1rem;align-items:center}
+    .prebar .prog{flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--glass-border)}
+    .prebar .prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg, var(--q-primary), var(--q-accent));box-shadow:var(--shadow-q)}
+    .prebar .meta{font-family:'JetBrains Mono',monospace;color:var(--text-dim);font-size:.85rem}
+
+    /* Language switch button */
+    #langBtn{margin-left:.25rem}
+
+    /* Responsive */
+    @media (max-width: 860px) { .stats { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 520px) { nav { display:none; } .wrap { padding: .75rem 1rem; } }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .animated-bg { animation: none; }
+    }
+
+    /* Offset for sticky header when scrolling to anchors */
+    #overview, #defi, #security, #analytics { scroll-margin-top: 90px; }
+
+    /* Subtle quantum grid overlay */
+    .grid-overlay { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .08; background-image:
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(var(--grid-line) 1px, transparent 1px);
+      background-size: 40px 40px; mix-blend-mode: screen; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="animated-bg" aria-hidden="true"></div>
+  <div class="particles" id="particles" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <header>
+    <div class="wrap">
+      <a class="brand" href="#" aria-label="ZYRA Home">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="wordmark" aria-hidden="true"><span>ZYRA</span>&nbsp;BLOCKCHAIN</div>
+      </a>
+      <nav aria-label="Primary">
+        <button class="nav-btn" data-target="overview">Overview</button>
+        <a class="nav-btn" href="defi.html" role="button">DeFi</a>
+        <a class="nav-btn" href="analytics.html" role="button">Analytics</a>
+        <a class="nav-btn" href="nft.html" role="button">NFT</a>
+        <a class="nav-btn" href="explorer.html" role="button" title="Live blocks and transactions">Explorer</a>
+      </nav>
+      <button id="themeBtn" class="nav-btn" title="Toggle theme">🌗</button>
+      <button id="authBtn" class="nav-btn" title="Sign in">Sign In</button>
+      <button id="langBtn" class="nav-btn" title="Language">🌐</button>
+      <div class="wallet">
+        <div id="walletState" class="pill">Not Connected</div>
+        <div id="reservedPill" class="pill" style="display:none" title="Your presale reservation"></div>
+        <button id="walletBtn" class="cta">Connect Wallet</button>
+        <button id="donateBtn" class="nav-btn" title="Donate">Donate</button>
+        <button id="presaleBtn" class="nav-btn" title="Join presale">Presale $0.12</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="prebar" id="presaleBar" style="display:none">
+    <div class="inner">
+      <div class="meta" id="preCountdown">Presale starts soon…</div>
+      <div class="prog" aria-label="Presale progress"><i id="preProgFill" style="width:0%"></i></div>
+      <div class="meta"><span id="preSold">0</span>/<span id="preTarget">0</span></div>
+    </div>
+  </div>
+
+  <main id="overview" class="hero" role="main">
+    <h1 class="h-title">Ultra‑Advanced Quantum Blockchain Intelligence</h1>
+    <p class="h-sub">Unified visibility across performance, security and DeFi with adaptive quantum UI. Live metrics, particle analytics, and responsive charts engineered for clarity and speed.</p>
+
+    <section class="stats" aria-label="Key Metrics">
+      <div class="card"><div id="statTPS" class="metric">--</div><div class="label">Transactions / sec</div></div>
+      <div class="card"><div id="statLatency" class="metric">--</div><div class="label">Average Latency</div></div>
+      <div class="card"><div id="statFinality" class="metric">--</div><div class="label">Finality Time</div></div>
+      <div class="card"><div id="statHealth" class="metric">--</div><div class="label">Network Health</div></div>
+    </section>
+  </main>
+
+  <section class="grid" id="defi">
+    <article class="tile">
+      <h3>DeFi Liquidity</h3>
+      <p>Total value locked, pool health and projected yield across core protocols.</p>
+    </article>
+    <article class="tile">
+      <h3>Quantum Security</h3>
+      <p>Post‑quantum cryptography posture, anomaly sensing and incident‑free days.</p>
+    </article>
+    <article class="tile">
+      <h3>Throughput Scaling</h3>
+      <p>Shard utilization, mempool pressure and predictive capacity models.</p>
+    </article>
+    <article class="tile">
+      <h3>Validator Cohesion</h3>
+      <p>Uptime distribution, slashing events and peer latency topology.</p>
+    </article>
+  </section>
+
+  <!-- New Security section so the nav button is functional -->
+  <section class="grid" id="security" aria-label="Security">
+    <article class="tile">
+      <h3>Quantum-Resistant Keys</h3>
+      <p>Hybrid PQC readiness, rotating key schedules, and signature scheme audits.</p>
+    </article>
+    <article class="tile">
+      <h3>Anomaly Detection</h3>
+      <p>Live heuristics on mempool patterns, MEV spikes, and slashing attempts.</p>
+    </article>
+    <article class="tile">
+      <h3>Incident-Free Days</h3>
+      <p>Historical uptime, validator cohesion index, and failover rehearsals.</p>
+    </article>
+  </section>
+
+  <section class="viz" id="analytics" aria-label="Charts">
+    <div class="chart">
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Network Performance</h3>
+      <canvas id="chartPerf"></canvas>
+    </div>
+    <div class="chart">
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Transaction Volume</h3>
+      <canvas id="chartVol"></canvas>
+    </div>
+  </section>
+
+  <div class="dock" aria-label="Quick Controls">
+    <button class="fab" title="Quantum Mode" id="btnQuantum">⚛️</button>
+    <button class="fab" title="DeFi Focus" id="btnDeFi">💎</button>
+    <button class="fab" title="Security Focus" id="btnSec">🛡️</button>
+    <button class="fab" title="Performance Focus" id="btnPerf">🚀</button>
+    <!-- New: Live Tx Speed Test trigger -->
+    <button class="fab" title="Run Tx Speed Test" id="btnSpeed">⏱️</button>
+  </div>
+
+  <footer>© 2025 ZYRA Blockchain • Quantum‑grade analytics</footer>
+
+  <!-- Auth Modal -->
+  <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" style="display:none">
+    <div class="dialog">
+      <h3 id="authTitle">Sign In</h3>
+      <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username" required></div>
+      <div class="field"><label for="authPass">Password</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password" required></div>
+      <div class="field" id="authPass2Wrap" style="display:none"><label for="authPass2">Confirm Password</label><input id="authPass2" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+      <div class="row" style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
+        <button class="nav-btn" id="authMode" type="button" title="Create account">Create account</button>
+        <div>
+          <button class="nav-btn" id="authCancel" type="button">Cancel</button>
+          <button class="cta" id="authSubmit" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donate Modal -->
+  <div class="modal" id="donateModal" role="dialog" aria-modal="true" aria-labelledby="donTitle" style="display:none">
+    <div class="dialog">
+      <h3 id="donTitle">Donate</h3>
+      <div class="field"><label for="donAddr">Recipient</label><input id="donAddr" placeholder="0x..." autocomplete="off"></div>
+      <div class="field"><label for="donAmt">Amount (ETH)</label><input id="donAmt" type="number" min="0" step="0.001" value="0.01"></div>
+      <div class="row" style="display:flex;justify-content:flex-end;align-items:center;margin-top:.6rem">
+        <button class="nav-btn" id="donCancel" type="button">Cancel</button>
+        <button class="cta" id="donSubmit" type="button" style="margin-left:.5rem">Donate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Claim Modal -->
+  <div class="modal" id="claimModal" role="dialog" aria-modal="true" aria-labelledby="claimTitle" style="display:none">
+    <div class="dialog">
+      <h3 id="claimTitle">Claim Tokens</h3>
+      <p id="claimInfo" style="color:var(--text-dim);margin:.25rem 0 .75rem">View your vesting schedule and claimable balance.</p>
+      <div class="field"><label>Claimable</label><div id="claimable" class="pill" style="display:inline-block">0</div></div>
+      <div class="row" style="display:flex;justify-content:flex-end;align-items:center;margin-top:.6rem">
+        <button class="nav-btn" id="claimCancel" type="button">Close</button>
+        <button class="cta" id="claimSubmit" type="button" style="margin-left:.5rem">Claim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhance Presale Modal: payment method + crypto total -->
+  <div class="modal" id="presaleModal" role="dialog" aria-modal="true" aria-labelledby="preTitle" style="display:none">
+    <div class="dialog">
+      <h3 id="preTitle">Join Presale</h3>
+      <div class="field"><label for="preQty">Quantity</label><input id="preQty" type="number" min="1" step="1" value="1"></div>
+      <div class="field"><label>Unit Price</label><div id="preUnit" class="pill" style="display:inline-block">$0.12</div></div>
+      <div class="field"><label>Total (USD)</label><div id="preTotal" class="pill" style="display:inline-block">$0.12</div></div>
+      <div class="field"><label for="prePay">Pay With</label>
+        <select id="prePay" class="nav-btn" style="width:100%">
+          <option value="ETH">ETH</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div class="field" id="preCryptoRow" style="display:none"><label>Crypto Amount</label><div id="preCrypto" class="pill" style="display:inline-block">--</div></div>
+      <div class="row" style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
+        <button class="nav-btn" id="preClaim" type="button" title="Open claim modal">Claim</button>
+        <div>
+          <button class="nav-btn" id="preCancel" type="button">Cancel</button>
+          <button class="cta" id="preSubmit" type="button" style="margin-left:.5rem">Checkout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    // Config
+    const ZYRA_CONFIG = {
+      presale: {
+        unitUSD: 0.12,
+        targetUnits: 1000000,
+        capPerWallet: 500,
+        allow: [
+          '0x1111111111111111111111111111111111111111',
+          '0x2222222222222222222222222222222222222222',
+          '0x3333333333333333333333333333333333333333'
+        ],
+        start: Date.now(), // set your window
+        end: Date.now() + 1000*60*60*24*7, // +7 days
+        recipient: '0x0000000000000000000000000000000000000000', // set sale wallet/contract
+        chainlinkEthUsd: '0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419', // mainnet ETH/USD
+        usdc: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // mainnet USDC
+        explorerTx: 'https://etherscan.io/tx/'
+      }
+    };
+
+    // Apply presale price labels (can be re-run after overrides load)
+    function applyPresalePrice(){
+      try{ const p = window.ZYRA_CONFIG?.presale; if(!p) return; const btn = document.getElementById('presaleBtn'); if(btn) btn.textContent = `Presale $${Number(p.unitUSD||0).toFixed(2)}`; const unitEl = document.getElementById('preUnit'); if(unitEl) unitEl.textContent = `$${Number(p.unitUSD||0).toFixed(2)}`; }catch{}
+    }
+
+    // Optional: load overrides from config.local.json (written by deploy/update script)
+    (async function loadConfigOverrides(){
+      const deepMerge = (t, s)=>{ if(Array.isArray(s)||Array.isArray(t)) return s; if(s && typeof s==='object'){ const o={...t}; for(const k of Object.keys(s)){ o[k]=deepMerge(t?.[k], s[k]); } return o; } return s===undefined? t : s; };
+      try{
+        const res = await fetch('config.local.json', { cache: 'no-store' });
+        if(res.ok){ const o = await res.json(); window.ZYRA_CONFIG = deepMerge(window.ZYRA_CONFIG||{}, o); applyPresalePrice(); }
+      }catch{}
+    })();
+
+    // Sync price label in header and modal with config
+    (function syncPresaleUI(){
+      const p = ZYRA_CONFIG?.presale; if(!p) return;
+      const btn = document.getElementById('presaleBtn');
+      if(btn) btn.textContent = `Presale $${Number(p.unitUSD||0).toFixed(2)}`;
+      const unitEl = document.getElementById('preUnit');
+      if(unitEl) unitEl.textContent = `$${Number(p.unitUSD||0).toFixed(2)}`;
+    })();
+
+    // Toasts
+    function toast(type, msg, opts={}){
+      const box = document.getElementById('toasts'); if(!box) return alert(msg);
+      const el = document.createElement('div'); el.className = 'toast '+(type||'info');
+      const ico = type==='success' ? '✅' : type==='error' ? '⛔' : type==='pending' ? '⏳' : 'ℹ️';
+      el.innerHTML = `<div class="t-ico">${ico}</div><div class="t-msg">${msg}</div><button class="t-close" aria-label="Close">✖</button>`;
+      box.appendChild(el);
+      const rm = ()=>{ el.style.opacity=.0; setTimeout(()=> el.remove(), 250); };
+      el.querySelector('.t-close').addEventListener('click', rm);
+      setTimeout(rm, opts.ttl ?? 5000);
+      return { close: rm, el };
+    }
+    // Route all alerts to toasts (non-blocking)
+    (function patchAlert(){ const _a = window.alert; window.alert = (m)=>{ try{ toast('info', String(m)); }catch{ _a(m); } }; })();
+
+    // Presale UI state
+    (function presaleStatus(){
+      const bar = document.getElementById('presaleBar');
+      const fill = document.getElementById('preProgFill');
+      const soldEl = document.getElementById('preSold');
+      const tgtEl = document.getElementById('preTarget');
+      const cdEl = document.getElementById('preCountdown');
+      if(!bar) return;
+      const ps = ZYRA_CONFIG.presale;
+      tgtEl.textContent = String(ps.targetUnits);
+      function data(){
+        const g = JSON.parse(localStorage.getItem('zyra:presale:global')||'{}');
+        return { sold: g.sold||0 };
+      }
+      function setReservedPill(){
+        const pill = document.getElementById('reservedPill');
+        const r = JSON.parse(localStorage.getItem('zyra:presale')||'null');
+        if(r && r.qty>0){ pill.style.display='inline-block'; pill.textContent = `Reserved: ${r.qty}`; }
+        else { pill.style.display='none'; pill.textContent=''; }
+      }
+      function tick(){
+        const now = Date.now();
+        const { sold } = data();
+        soldEl.textContent = String(sold);
+        const pct = Math.min(100, (sold/ps.targetUnits)*100) || 0;
+        fill.style.width = pct.toFixed(2)+'%';
+        bar.style.display = 'block';
+        const tstr = now < ps.start ? `Starts in ${fmt(ps.start-now)}` : now>ps.end ? 'Ended' : `Ends in ${fmt(ps.end-now)}`;
+        cdEl.textContent = tstr;
+        setReservedPill();
+      }
+      function fmt(ms){ if(ms<=0) return '0s'; const s=Math.floor(ms/1000); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); const r=[d?d+'d':'',h?h+'h':'',m?m+'m':'', (s%60)+'s'].filter(Boolean).join(' '); return r; }
+      tick(); setInterval(tick, 1000);
+    })();
+
+    // Language toggle (simple demo)
+    (function i18n(){
+      const btn = document.getElementById('langBtn'); if(!btn) return;
+      const langs = ['en','es']; let idx = langs.indexOf(localStorage.getItem('lang')||'en');
+      function apply(){ localStorage.setItem('lang', langs[idx]); /* add real translations as needed */ }
+      btn.addEventListener('click', ()=>{ idx = (idx+1)%langs.length; toast('info', 'Language: '+langs[idx].toUpperCase()); apply(); });
+      apply();
+    })();
+
+    // Donate: replace alerts with toasts
+    (function donate_patch(){
+      const submit = document.getElementById('donSubmit'); if(!submit) return;
+      const modal = document.getElementById('donateModal');
+      function close(){ modal.style.display='none'; }
+      submit.replaceWith(submit.cloneNode(true));
+      const submit2 = document.getElementById('donSubmit');
+      submit2.addEventListener('click', async()=>{
+        const addr = document.getElementById('donAddr'); const amt = document.getElementById('donAmt');
+        const to = (addr.value||'').trim(); const amount = parseFloat(amt.value||'0');
+        if(!/^0x[a-fA-F0-9]{40}$/.test(to)) return toast('error','Enter a valid recipient address.');
+        if(!(amount>0)) return toast('error','Enter a positive amount.');
+        if(typeof window.ethereum==='undefined'){ toast('error','Wallet not detected. Please connect MetaMask.'); return; }
+        try{
+          const provider = new ethers.providers.Web3Provider(window.ethereum,'any');
+          const signer = provider.getSigner();
+          const pending = toast('pending','Sending donation…',{ ttl: 15000 });
+          const tx = await signer.sendTransaction({ to, value: ethers.utils.parseEther(String(amount)) });
+          pending.close(); toast('success', 'Donation sent. Tx: '+tx.hash);
+          close();
+        }catch(err){ toast('error','Donation failed: '+(err?.message||err)); }
+      });
+    })();
+
+    // Presale checkout (ETH/USDC with USD conversion)
+    (function presale_checkout(){
+      const btn = document.getElementById('presaleBtn');
+      const modal = document.getElementById('presaleModal');
+      const qty = document.getElementById('preQty');
+      const totalEl = document.getElementById('preTotal');
+      const paySel = document.getElementById('prePay');
+      const cryptoRow = document.getElementById('preCryptoRow');
+      const cryptoEl = document.getElementById('preCrypto');
+      const cancel = document.getElementById('preCancel');
+      const submit = document.getElementById('preSubmit');
+      const claimBtn = document.getElementById('preClaim');
+      if(!btn||!modal) return;
+      const unit = ZYRA_CONFIG.presale.unitUSD;
+      let allowCache = null;
+
+      async function loadAllow(){
+        try{
+          const res = await fetch('/api/presale/allow');
+          if(!res.ok) throw new Error('allow fetch failed');
+          const j = await res.json();
+          if(Array.isArray(j.allow) && j.allow.length){ allowCache = j.allow.map(x=>String(x).toLowerCase()); localStorage.setItem('zyra:allow', JSON.stringify(allowCache)); return allowCache; }
+        }catch{
+          const saved = JSON.parse(localStorage.getItem('zyra:allow')||'null');
+          if(Array.isArray(saved)) { allowCache = saved; return saved; }
+        }
+        const fallback = Array.isArray(ZYRA_CONFIG?.presale?.allow) ? ZYRA_CONFIG.presale.allow.map(x=>x.toLowerCase()) : [];
+        allowCache = fallback; return fallback;
+      }
+
+      async function isAllowed(addr){
+        const list = allowCache || await loadAllow();
+        if(!list || !list.length) return true; // open if no list provided
+        return list.includes(addr.toLowerCase());
+      }
+
+      function open(){
+        const unitEl = document.getElementById('preUnit'); if(unitEl) unitEl.textContent = `$${Number(unit).toFixed(2)}`;
+        modal.style.display='flex'; updateTotals(); setTimeout(()=> qty.focus(), 0);
+      }
+      function close(){ modal.style.display='none'; }
+      btn.addEventListener('click', open);
+      cancel.addEventListener('click', close);
+      modal.addEventListener('click', (e)=>{ if(e.target===modal) close(); });
+
+      qty.addEventListener('input', updateTotals);
+      paySel.addEventListener('change', updateTotals);
+
+      async function getEthUsd(){
+        try{
+          const provider = new ethers.providers.Web3Provider(window.ethereum,'any');
+          const feed = new ethers.Contract(ZYRA_CONFIG.presale.chainlinkEthUsd, ["function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)","function decimals() view returns (uint8)"], provider);
+          const [rd,dec] = await Promise.all([feed.latestRoundData(), feed.decimals()]);
+          const price = Number(rd[1]) / 10**Number(dec); // ETH/USD
+          return price>0 ? price : null;
+        }catch{ return null; }
+      }
+
+      function addGlobalSold(q){ const g=JSON.parse(localStorage.getItem('zyra:presale:global')||'{}'); g.sold=(g.sold||0)+q; localStorage.setItem('zyra:presale:global', JSON.stringify(g)); }
+      function saveReservation(q, usd){ const rec={ qty:q, unit, total:+usd, ts:Date.now() }; localStorage.setItem('zyra:presale', JSON.stringify(rec)); }
+      function persistBackend(addr, q){ try{ fetch('/api/presale/reserve',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ addr, qty:q, ts: Date.now() }) }); }catch{} }
+      function getWalletPurchased(addr){ return (JSON.parse(localStorage.getItem('zyra:presale:by:'+addr)||'0')||0); }
+      function setWalletPurchased(addr, v){ localStorage.setItem('zyra:presale:by:'+addr, String(v)); }
+
+      async function payETH(usd){
+        if(typeof window.ethereum==='undefined') throw new Error('Wallet not detected');
+        const provider = new ethers.providers.Web3Provider(window.ethereum,'any');
+        const signer = provider.getSigner();
+        const price = await getEthUsd(); const eth = price? (usd/price) : (usd/3000);
+        const to = ZYRA_CONFIG.presale.recipient;
+        return signer.sendTransaction({ to, value: ethers.utils.parseEther(eth.toFixed(6)) });
+      }
+      async function payUSDC(usd){
+        if(typeof window.ethereum==='undefined') throw new Error('Wallet not detected');
+        const provider = new ethers.providers.Web3Provider(window.ethereum,'any');
+        const signer = provider.getSigner();
+        const USDC = new ethers.Contract(ZYRA_CONFIG.presale.usdc, ["function transfer(address to, uint256 amount) returns (bool)", "function decimals() view returns(uint8)"], signer);
+        const dec = await USDC.decimals();
+        const amt = ethers.utils.parseUnits(usd.toFixed(2), dec); // 2-decimal USD to 6-decimal USDC
+        const to = ZYRA_CONFIG.presale.recipient;
+        return USDC.transfer(to, amt);
+      }
+
+      submit.addEventListener('click', async()=>{
+        const q = Math.max(1, parseInt(qty.value||'1'));
+        const usd = +(unit*q).toFixed(2);
+        try{
+          const addr = await currentAddr();
+          const cfg = ZYRA_CONFIG.presale;
+          if(!(await isAllowed(addr))){ toast('error','Address not whitelisted for presale.'); return; }
+          const cap = cfg.capPerWallet ?? 0; if(cap>0){ const sofar = getWalletPurchased(addr); if(sofar + q > cap){ toast('error', `Cap exceeded. Max ${cap}, you have ${sofar}.`); return; } }
+
+          const note = toast('pending','Processing checkout…',{ ttl: 15000 });
+          let tx; if(paySel.value==='ETH') tx = await payETH(usd); else tx = await payUSDC(usd);
+          note.close(); toast('success','Checkout submitted. Tx: '+tx.hash);
+          saveReservation(q, usd); addGlobalSold(q); setWalletPurchased(addr, getWalletPurchased(addr)+q); persistBackend(addr, q);
+          modal.style.display='none';
+        }catch(err){ toast('error','Checkout failed: '+(err?.message||err)); }
+      });
+
+      // Claim flow (demo)
+      function openClaim(){ document.getElementById('claimModal').style.display='flex'; updateClaimable(); }
+      function updateClaimable(){ const r=JSON.parse(localStorage.getItem('zyra:presale')||'null'); const q=r?.qty||0; const unlocked = Math.floor(q*0.2); document.getElementById('claimable').textContent = String(unlocked); }
+      document.getElementById('claimCancel').addEventListener('click', ()=> document.getElementById('claimModal').style.display='none');
+      document.getElementById('claimSubmit').addEventListener('click', ()=>{ toast('success','Claimed demo tokens.'); document.getElementById('claimModal').style.display='none'; });
+      claimBtn.addEventListener('click', openClaim);
+    })();
+
+    // Register Service Worker
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', ()=>{
+        navigator.serviceWorker.register('sw.js').catch(()=>{});
+      });
+    }
+
+    // Live transaction speed monitor + one-click test
+    (function live_tx_speed(){
+      const statTPS = document.getElementById('statTPS');
+      const statLatency = document.getElementById('statLatency');
+      const statFinality = document.getElementById('statFinality');
+      const btn = document.getElementById('btnSpeed');
+
+      let provider;
+      try {
+        provider = typeof window.ethereum !== 'undefined'
+          ? new ethers.providers.Web3Provider(window.ethereum, 'any')
+          : ethers.getDefaultProvider();
+      } catch {}
+
+      if(provider){
+        let lastTs = null; let avgBlock = null; let avgTPS = null; const alpha = 0.3;
+        provider.on('block', async (bn)=>{
+          try{
+            const block = await provider.getBlock(bn);
+            const ts = Number(block?.timestamp || 0);
+            const txc = Array.isArray(block?.transactions) ? block.transactions.length : 0;
+            if(lastTs){
+              const dt = Math.max(1, ts - lastTs); // seconds
+              const tpsNow = txc / dt;
+              avgTPS = avgTPS==null ? tpsNow : (alpha*tpsNow + (1-alpha)*avgTPS);
+              avgBlock = avgBlock==null ? dt : (alpha*dt + (1-alpha)*avgBlock);
+              if(statTPS) statTPS.textContent = avgTPS.toFixed(2);
+              if(statFinality) statFinality.textContent = avgBlock.toFixed(2) + 's/block';
+            }
+            lastTs = ts || lastTs;
+          }catch{}
+        });
+
+        async function ping(){
+          const t0 = performance.now();
+          try{ await provider.getBlockNumber(); const ms = performance.now()-t0; if(statLatency) statLatency.textContent = Math.round(ms)+' ms RPC'; }
+          catch{}
+        }
+        ping(); setInterval(ping, 10000);
+      }
+
+      async function ensureWallet(){
+        const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        await web3.send('eth_requestAccounts', []);
+        return web3;
+      }
+      async function ensureLocal(web3){
+        try{
+          const net = await web3.getNetwork();
+          if(net?.chainId !== 31337){
+            try{
+              await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x7A69' }] });
+            }catch(err){
+              if(err?.code === 4902){
+                await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+                  chainId: '0x7A69', chainName: 'Hardhat Localhost', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: ['http://127.0.0.1:8545'], blockExplorerUrls: []
+                }]});
+              } else { throw err; }
+            }
+          }
+        }catch{}
+      }
+
+      if(btn){
+        btn.addEventListener('click', async ()=>{
+          if(typeof window.ethereum==='undefined'){ toast('error','Wallet not detected. Please connect MetaMask.'); return; }
+          try{
+            const web3 = await ensureWallet();
+            await ensureLocal(web3);
+            const signer = web3.getSigner();
+            const addr = await signer.getAddress();
+            const pending = toast('pending','Submitting test transaction…',{ ttl: 20000 });
+            const start = Date.now();
+            const tx = await signer.sendTransaction({ to: addr, value: ethers.utils.parseEther('0.0') });
+            const rec = await web3.waitForTransaction(tx.hash, 1);
+            const ms = Date.now() - start;
+            pending.close();
+            toast('success', `Mined in ${(ms/1000).toFixed(2)}s (block ${rec.blockNumber}).`);
+          }catch(err){ toast('error','Speed test failed: '+(err?.message||err)); }
+        });
+      }
+    })();
+
+    // Wallet connect (MetaMask)
+    (function wallet_connect(){
+      const btn = document.getElementById('walletBtn');
+      const stateEl = document.getElementById('walletState');
+
+      const short = (a)=> a ? (a.slice(0,6)+'…'+a.slice(-4)) : 'Not Connected';
+      let web3 = null; let cachedAddr = null;
+
+      function hasMetaMask(){ return typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask; }
+
+      async function getProvider(){
+        if(!hasMetaMask()) return null;
+        if(!web3) web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        return web3;
+      }
+      async function getAddr(){
+        try{ const p = await getProvider(); if(!p) return null; const accts = await p.listAccounts(); return (accts && accts[0]) || null; }
+        catch{ return null; }
+      }
+
+      async function connect(){
+        if(!hasMetaMask()){
+          toast('error','MetaMask not detected. Opening install page…');
+          window.open('https://metamask.io/download/', '_blank');
+          return null;
+        }
+        try{
+          // Use the native request for best compatibility
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          // Try to switch to local Hardhat (31337). If missing, add it.
+          await ensureLocalChain();
+          const p = await getProvider();
+          const a = await p.getSigner().getAddress();
+          cachedAddr = a; localStorage.setItem('zyra:addr', a);
+          if(stateEl) stateEl.textContent = short(a);
+          if(btn) btn.textContent = 'Connected';
+          toast('success','Wallet connected.');
+          return a;
+        }catch(err){ toast('error','Connect failed: '+(err?.message||err)); return null; }
+      }
+
+      // Attempt to switch to Hardhat local chain (31337); add if not available
+      async function ensureLocalChain(){
+        try{
+          const provider = await getProvider(); if(!provider) return;
+          const net = await provider.getNetwork();
+          if(Number(net?.chainId) === 31337) return;
+          try{
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x7A69' }] });
+          }catch(err){
+            if(err?.code === 4902){
+              await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+                chainId: '0x7A69', chainName: 'Hardhat Localhost', nativeCurrency: { name:'ETH', symbol:'ETH', decimals:18 }, rpcUrls:['http://127.0.0.1:8545'], blockExplorerUrls: []
+              }]});
+            }
+          }
+        }catch{ /* ignore */ }
+      }
+
+      async function initUI(){
+        // Warn if running in a browser without extensions (e.g., VS Code Simple Browser)
+        if(!hasMetaMask() && !/localhost:3001/.test(location.host)){
+          // no-op; served from file or other origins
+        }
+        if(!hasMetaMask()){
+          if(btn) btn.textContent = 'Install MetaMask';
+          if(stateEl) stateEl.textContent = 'Wallet Not Detected';
+        }
+        const a = await getAddr() || localStorage.getItem('zyra:addr') || null;
+        cachedAddr = a;
+        if(stateEl) stateEl.textContent = short(a);
+        if(btn && hasMetaMask()) btn.textContent = a ? 'Connected' : 'Connect Wallet';
+      }
+
+      if(btn) btn.addEventListener('click', connect);
+
+      if(window.ethereum){
+        window.ethereum.on('accountsChanged', (accounts)=>{
+          cachedAddr = accounts && accounts[0] ? accounts[0] : null;
+          if(cachedAddr) localStorage.setItem('zyra:addr', cachedAddr); else localStorage.removeItem('zyra:addr');
+          if(stateEl) stateEl.textContent = short(cachedAddr);
+          if(btn) btn.textContent = cachedAddr ? 'Connected' : 'Connect Wallet';
+        });
+        window.ethereum.on('chainChanged', ()=>{ /* page reload recommended but optional */ });
+      }
+
+      // Expose for other modules (e.g., presale)
+      window.currentAddr = async function(){
+        const a = await getAddr();
+        if(a) return a;
+        const b = await connect();
+        return b;
+      };
+
+      initUI();
+    })();
+
+    // Generic modal helpers + wire Donate/Auth buttons
+    (function ui_modals(){
+      const $ = (id)=> document.getElementById(id);
+      const open = (id)=>{ const m=$(id); if(m){ m.style.display='flex'; const first = m.querySelector('input,button,select,textarea'); if(first) setTimeout(()=>first.focus(),0); } };
+      const close = (id)=>{ const m=$(id); if(m) m.style.display='none'; };
+
+      // Donate
+      const donateBtn = $('donateBtn'); const donateCancel = $('donCancel'); const donateModal = $('donateModal');
+      if(donateBtn) donateBtn.addEventListener('click', ()=> open('donateModal'));
+      if(donateCancel) donateCancel.addEventListener('click', ()=> close('donateModal'));
+      if(donateModal) donateModal.addEventListener('click', (e)=>{ if(e.target===donateModal) close('donateModal'); });
+
+      // Auth (Sign In / Sign Up local demo)
+      const authBtn = $('authBtn'); const authModal = $('authModal'); const authCancel=$('authCancel'); const authMode=$('authMode'); const authTitle=$('authTitle'); const pass2Wrap=$('authPass2Wrap'); const authSubmit=$('authSubmit');
+      let mode = 'signin';
+      function applyAuthMode(){ if(authTitle) authTitle.textContent = mode==='signin'?'Sign In':'Create Account'; if(pass2Wrap) pass2Wrap.style.display = mode==='signup'?'block':'none'; if(authMode) authMode.textContent = mode==='signin'?'Create account':'I have an account'; }
+      function initAuthUI(){ const u = JSON.parse(localStorage.getItem('zyra:user')||'null'); if(u && authBtn) authBtn.textContent = 'Account'; }
+      if(authBtn) authBtn.addEventListener('click', ()=>{ mode='signin'; applyAuthMode(); open('authModal'); });
+      if(authMode) authMode.addEventListener('click', ()=>{ mode = mode==='signin'?'signup':'signin'; applyAuthMode(); });
+      if(authCancel) authCancel.addEventListener('click', ()=> close('authModal'));
+      if(authModal) authModal.addEventListener('click', (e)=>{ if(e.target===authModal) close('authModal'); });
+      if(authSubmit) authSubmit.addEventListener('click', ()=>{
+        const email = $('authEmail')?.value?.trim(); const p1 = $('authPass')?.value||''; const p2 = $('authPass2')?.value||'';
+        if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('error','Enter a valid email.');
+        if(p1.length < 6) return toast('error','Password must be at least 6 characters.');
+        if(mode==='signup' && p1!==p2) return toast('error','Passwords do not match.');
+        localStorage.setItem('zyra:user', JSON.stringify({ email }));
+        if(authBtn) authBtn.textContent = 'Account';
+        toast('success', mode==='signin'?'Signed in.':'Account created.');
+        close('authModal');
+      });
+      initAuthUI();
+
+      // Esc to close any open modal
+      document.addEventListener('keydown', (e)=>{
+        if(e.key==='Escape') ['authModal','donateModal','presaleModal','claimModal'].forEach(id=> close(id));
+      });
+    })();
+  </script>
+</body>
+</html>

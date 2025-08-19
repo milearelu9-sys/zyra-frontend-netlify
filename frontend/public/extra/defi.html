@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZYRA | DeFi Intelligence</title>
+  <meta name="description" content="ZYRA DeFi analytics: TVL, pools, APY and liquidity health with a quantum black/green theme." />
+  <meta name="theme-color" content="#16a34a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --q-primary: #00ff95; /* neon green */
+      --q-secondary: #16a34a; /* emerald */
+      --q-accent: #84cc16; /* lime */
+      --q-success: #22c55e;
+      --q-danger: #ef4444;
+      --q-bg-0: #050607; /* near black */
+      --q-bg-1: #0a0f0a; /* black with green hint */
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.10);
+      --glass-border: rgba(255,255,255,0.14);
+      --text: #e8fcea; /* slightly green-tinted white */
+      --text-dim: #a9f5c9;
+      --shadow-q: 0 10px 50px rgba(34,197,94,.25);
+      --grid-line: #b7f5d1;
+      --chart-grid: rgba(74,222,128,.10);
+      --chart-grid-weak: rgba(74,222,128,.06);
+      --chart-tick: #c5ffde;
+      --tooltip-bg: rgba(6,12,10,.92);
+      --tooltip-title: #eafff2;
+      --tooltip-body: #d5ffe8;
+      --tooltip-border: rgba(134,239,172,.25);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 15% 10%, #0b1a12 0%, transparent 60%),
+                  radial-gradient(1000px 900px at 95% 0%, #08140c 0%, transparent 55%),
+                  linear-gradient(180deg, #040605 0%, #040605 100%);
+      background-color: var(--q-bg-0);
+      overflow-x: hidden;
+    }
+    .animated-bg { position: fixed; inset: -20vmax; z-index: -2; filter: blur(80px) saturate(140%); opacity: .5; background: conic-gradient(from 180deg at 50% 50%, var(--q-primary), var(--q-secondary), var(--q-accent), var(--q-primary)); animation: swirl 30s linear infinite; }
+    @keyframes swirl { to { transform: rotate(360deg); } }
+    .particles { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+    .dot { position: absolute; width: 2px; height: 2px; background: #86efac; border-radius: 999px; opacity: .8; }
+
+    header { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(12px); background: linear-gradient(180deg, rgba(8,12,24,.85), rgba(8,12,24,.6)); border-bottom: 1px solid var(--glass-border); }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: .9rem 1.25rem; display: flex; align-items: center; gap: 1rem; }
+    .brand { display: flex; align-items: center; gap: .75rem; text-decoration: none; color: var(--text); }
+    .wordmark { font-family: Orbitron, Inter, sans-serif; font-weight: 900; letter-spacing: .12em; }
+    .wordmark span { background: linear-gradient(90deg, var(--q-primary), var(--q-secondary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .logo { width: 44px; height: 44px; border-radius: 14px; position: relative; overflow: hidden; box-shadow: 0 0 0 1px #145532, var(--shadow-q); background: radial-gradient(120% 120% at 10% 10%, #0f2a1a 0%, #0a1510 60%, #070e0a 100%); }
+    .logo::before { content: ''; position: absolute; inset: -40%; background: conic-gradient(from 0deg, transparent 0 40%, #22ff88 50%, transparent 60% 100%); animation: spin 5s linear infinite; filter: blur(6px); opacity: .9; }
+    .logo::after  { content: 'Z'; position: absolute; inset: 0; display: grid; place-items: center; font-family: Orbitron; font-weight: 900; font-size: 22px; color: #eafff2; text-shadow: 0 0 12px #22ff88; letter-spacing: .08em; }
+
+    nav { margin-left: auto; display: flex; gap: .5rem; flex-wrap: wrap; }
+    .nav-btn { position: relative; padding: .55rem .9rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font-weight: 600; letter-spacing: .02em; cursor: pointer; transition: .25s; text-decoration: none; display: inline-flex; align-items: center; }
+    .nav-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-q); border-color: #22c55e55; }
+    .nav-btn.active { border-color: #22c55eaa; box-shadow: 0 0 0 1px #22c55e55, var(--shadow-q); background: linear-gradient(180deg, rgba(34,197,94,.12), rgba(34,197,94,.06)); }
+    .nav-btn::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 6px; height: 2px; background: linear-gradient(90deg,var(--q-primary),var(--q-secondary)); transform: scaleX(0); transform-origin: left; transition: transform .25s; opacity: .85; }
+    .nav-btn.active::after, .nav-btn:hover::after { transform: scaleX(1); }
+
+    .wallet { display: flex; align-items: center; gap: .6rem; margin-left: .5rem; }
+    .pill { padding: .45rem .7rem; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); font-family: 'JetBrains Mono', monospace; font-size: .85rem; color: var(--text-dim); }
+    .cta { padding: .6rem 1rem; border-radius: 12px; background: linear-gradient(90deg, var(--q-primary), var(--q-secondary)); border: 0; color: #021412; font-weight: 800; letter-spacing: .04em; cursor: pointer; box-shadow: 0 8px 30px rgba(34,197,94,.35); background-size: 200% 100%; transition: background-position .4s, box-shadow .3s, transform .2s; }
+    .cta:hover { background-position: 100% 0; transform: translateY(-1px); box-shadow: 0 12px 40px rgba(34,197,94,.45); }
+
+    .hero { max-width: 1200px; margin: 2.5rem auto 1rem; padding: 0 1.25rem; display: grid; gap: 1rem; align-items: center; }
+    .h-title { font-family: Orbitron, Inter, sans-serif; font-weight: 900; font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1; letter-spacing: .06em; margin: 0; background: linear-gradient(120deg, #eafff2 10%, var(--q-primary) 45%, var(--q-secondary) 60%, #e7ffe3 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .h-sub { color: var(--text-dim); max-width: 75ch; margin: .35rem 0 0; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1rem; margin-top: 1.2rem; }
+    .card { position: relative; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; overflow: hidden; }
+    .card::before { content: ''; position: absolute; inset: -100% -50%; background: radial-gradient(60% 60% at 10% 10%, rgba(74,222,128,.25), transparent 60%); transform: rotate(12deg); opacity: .5; }
+    .metric { font-family: Orbitron; font-weight: 900; font-size: clamp(1.1rem, 3vw, 2rem); letter-spacing: .04em; color: #e5ffef; }
+    .label { color: var(--text-dim); font-size: .85rem; margin-top: .3rem; }
+
+    .grid { max-width: 1200px; margin: 2rem auto; padding: 0 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .tile { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.1rem; transition: .25s; backdrop-filter: blur(6px); position: relative; }
+    .tile::after { content: ''; position: absolute; inset: 0; border-radius: 16px; pointer-events: none; background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(132,204,22,.18)); opacity: 0; transition: opacity .25s; }
+    .tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-q); }
+    .tile:hover::after { opacity: 1; }
+
+    .viz { max-width: 1200px; margin: 2rem auto 3rem; padding: 0 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+    .chart { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.35); }
+    canvas { width: 100% !important; height: 300px !important; }
+
+    footer { border-top: 1px solid var(--glass-border); background: linear-gradient(180deg, rgba(8,12,24,.6), rgba(8,12,24,.9)); padding: 1.2rem; text-align: center; color: var(--text-dim); }
+
+    /* Launchpad styles */
+    .launchpad { max-width: 1200px; margin: 2rem auto 3rem; padding: 0 1.25rem; }
+    .launchpad h2 { margin: 0 0 .3rem; font-family: Orbitron, Inter, sans-serif; letter-spacing: .06em; }
+    .wizard { margin-top: 1rem; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.35); }
+    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; list-style: none; padding: 0; margin: 0; border-bottom: 1px solid var(--glass-border); background: linear-gradient(180deg, rgba(16,185,129,.06), rgba(16,185,129,.02)); }
+    .steps li { position: relative; padding: .9rem .75rem; text-align: center; color: var(--text-dim); font-weight: 700; font-size: .9rem; letter-spacing: .03em; }
+    .steps li.active { color: var(--text); }
+    .steps li.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: linear-gradient(90deg,var(--q-primary),var(--q-secondary)); box-shadow: 0 0 12px rgba(34,197,94,.45); }
+
+    .step { display: none; padding: 1rem; }
+    .step.active { display: block; }
+    .fields { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+    .field { grid-column: span 6; display: flex; flex-direction: column; gap: .4rem; }
+    .field.full { grid-column: 1 / -1; }
+    .field.third { grid-column: span 4; }
+    .field label { font-weight: 700; color: var(--text); font-size: .9rem; }
+    .field input, .field select, .field textarea { background: rgba(0,0,0,.25); border: 1px solid var(--glass-border); border-radius: 12px; padding: .7rem .8rem; color: var(--text); font: inherit; }
+    .field textarea { min-height: 110px; resize: vertical; }
+    .hint { color: var(--text-dim); font-size: .8rem; }
+
+    .actions { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: 1rem; border-top: 1px solid var(--glass-border); background: linear-gradient(180deg, rgba(0,0,0,.12), transparent); }
+    .actions .left, .actions .right { display: flex; gap: .6rem; align-items: center; }
+
+    .btn { padding: .6rem 1rem; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font-weight: 700; letter-spacing: .03em; cursor: pointer; transition: .25s; }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-q); border-color: #22c55e55; }
+    .btn-ghost { background: transparent; }
+    .btn-primary { background: linear-gradient(90deg, var(--q-primary), var(--q-secondary)); border-color: transparent; color: #021412; box-shadow: 0 8px 30px rgba(34,197,94,.35); }
+    .btn-primary:hover { box-shadow: 0 12px 40px rgba(34,197,94,.45); }
+    .btn-success { background: linear-gradient(90deg, #00ff95, #16a34a); border-color: transparent; color: #04130d; box-shadow: 0 8px 30px rgba(16,185,129,.35); }
+    .btn-success:hover { box-shadow: 0 12px 40px rgba(16,185,129,.5); }
+
+    pre.preview { background: rgba(0,0,0,.4); border: 1px solid var(--glass-border); border-radius: 12px; padding: .75rem 1rem; color: var(--text); max-height: 260px; overflow: auto; }
+
+    .gallery { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .proj { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; }
+    .proj h4 { margin: 0 0 .35rem; }
+    .proj .meta { color: var(--text-dim); font-size: .85rem; margin-top: .25rem; }
+
+    @media (max-width: 860px) {
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .field, .field.third { grid-column: 1 / -1; }
+    }
+    @media (max-width: 520px) { nav { display:none; } .wrap { padding: .75rem 1rem; } }
+    .grid-overlay { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .08; background-image:
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(var(--grid-line) 1px, transparent 1px);
+      background-size: 40px 40px; mix-blend-mode: screen; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="animated-bg" aria-hidden="true"></div>
+  <div class="particles" id="particles" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <header>
+    <div class="wrap">
+      <a class="brand" href="index.html" aria-label="ZYRA Home">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="wordmark" aria-hidden="true"><span>ZYRA</span>&nbsp;BLOCKCHAIN</div>
+      </a>
+      <nav aria-label="Primary">
+        <a class="nav-btn" href="index.html#overview">Overview</a>
+        <a class="nav-btn active" href="defi.html" aria-current="page">DeFi</a>
+        <a class="nav-btn" href="index.html#security">Security</a>
+        <a class="nav-btn" href="index.html#analytics">Analytics</a>
+      </nav>
+      <button id="themeBtn" class="nav-btn" title="Toggle theme">🌗</button>
+      <div class="wallet">
+        <div id="walletState" class="pill">Not Connected</div>
+        <button id="walletBtn" class="cta">Connect Wallet</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="hero" role="main">
+    <h1 class="h-title">DeFi Intelligence</h1>
+    <p class="h-sub">Live TVL, liquidity distribution and APY insights across protocols. Quantum‑grade clarity with a black & green theme.</p>
+
+    <section class="stats" aria-label="DeFi Metrics">
+      <div class="card"><div id="statTVL" class="metric">--</div><div class="label">Total Value Locked</div></div>
+      <div class="card"><div id="statPools" class="metric">--</div><div class="label">Active Pools</div></div>
+      <div class="card"><div id="statAPY" class="metric">--</div><div class="label">Avg. APY</div></div>
+      <div class="card"><div id="statChains" class="metric">--</div><div class="label">Active Chains</div></div>
+    </section>
+  </main>
+
+  <section class="grid" aria-label="Highlights">
+    <article class="tile">
+      <h3>Liquidity Health</h3>
+      <p>Pool utilization, depth stability and slippage‑aware rebalancing signals.</p>
+    </article>
+    <article class="tile">
+      <h3>Yield Opportunities</h3>
+      <p>Risk‑adjusted APY projections with volatility‑aware confidence bands.</p>
+    </article>
+    <article class="tile">
+      <h3>Protocol Coverage</h3>
+      <p>Top chains and protocols, cross‑chain TVL shifts and migration heatmaps.</p>
+    </article>
+  </section>
+
+  <section class="viz" aria-label="Charts">
+    <div class="chart">
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">TVL Over Time</h3>
+      <canvas id="chartTVL"></canvas>
+    </div>
+    <div class="chart">
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">APY Distribution</h3>
+      <canvas id="chartAPY"></canvas>
+    </div>
+  </section>
+
+  <!-- Launchpad CTA under hero -->
+  <section class="grid" aria-label="Launchpad CTA">
+    <article class="tile" style="grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+      <div>
+        <h3>Launchpad</h3>
+        <p>Start a new DeFi project in minutes. Configure token, funding, compliance and publish a signed manifest.</p>
+      </div>
+      <a href="#launchpad" class="cta">Start a Project</a>
+    </article>
+  </section>
+
+  <section class="launchpad" id="launchpad" aria-label="Launchpad">
+    <h2>Launchpad — Start a Project</h2>
+    <p class="h-sub">A guided, self‑serve project creator with signed manifests. Build responsibly: we include compliance, vesting and whitelists.</p>
+    <div class="wizard" id="wizard">
+      <ol class="steps" id="steps">
+        <li class="active">Project</li>
+        <li>Token</li>
+        <li>Funding</li>
+        <li>Compliance</li>
+        <li>Review</li>
+      </ol>
+      <form id="launchForm">
+        <!-- Step 1: Project -->
+        <div class="step active" data-step="1">
+          <div class="fields">
+            <div class="field full">
+              <label for="p_name">Project name</label>
+              <input id="p_name" name="p_name" placeholder="e.g. ZYRA Swap" required />
+            </div>
+            <div class="field full">
+              <label for="p_tagline">Tagline</label>
+              <input id="p_tagline" name="p_tagline" placeholder="A one‑line mission" />
+            </div>
+            <div class="field">
+              <label for="p_site">Website</label>
+              <input id="p_site" name="p_site" placeholder="https://..." />
+            </div>
+            <div class="field">
+              <label for="p_repo">Repository</label>
+              <input id="p_repo" name="p_repo" placeholder="https://github.com/..." />
+            </div>
+            <div class="field third">
+              <label for="p_category">Category</label>
+              <select id="p_category" name="p_category">
+                <option>DEX</option>
+                <option>Lending</option>
+                <option>Derivatives</option>
+                <option>Yield</option>
+                <option>Infrastructure</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="p_desc">Description</label>
+              <textarea id="p_desc" name="p_desc" placeholder="What are you building?" ></textarea>
+              <div class="hint">Tip: clear problem, solution, and roadmap.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Step 2: Token -->
+        <div class="step" data-step="2">
+          <div class="fields">
+            <div class="field">
+              <label for="t_name">Token name</label>
+              <input id="t_name" name="t_name" placeholder="e.g. ZYRA" />
+            </div>
+            <div class="field">
+              <label for="t_symbol">Symbol</label>
+              <input id="t_symbol" name="t_symbol" placeholder="e.g. ZYRA" maxlength="11" />
+            </div>
+            <div class="field">
+              <label for="t_decimals">Decimals</label>
+              <input id="t_decimals" name="t_decimals" type="number" min="0" max="18" value="18" />
+            </div>
+            <div class="field">
+              <label for="t_supply">Initial supply</label>
+              <input id="t_supply" name="t_supply" type="number" min="0" step="any" placeholder="e.g. 1e9" />
+            </div>
+            <div class="field">
+              <label for="t_mintable">Token type</label>
+              <select id="t_mintable" name="t_mintable">
+                <option value="fixed">Fixed supply</option>
+                <option value="mintable">Mintable</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label for="t_whitelist">Whitelist addresses (optional, one per line)</label>
+              <textarea id="t_whitelist" name="t_whitelist" placeholder="0xabc...\n0xdef...\n... "></textarea>
+              <div class="hint">We'll compute a Merkle root you can use in your sale contract.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Step 3: Funding -->
+        <div class="step" data-step="3">
+          <div class="fields">
+            <div class="field">
+              <label for="f_currency">Raise currency</label>
+              <select id="f_currency" name="f_currency">
+                <option value="ETH">ETH</option>
+                <option value="USDC">USDC</option>
+                <option value="DAI">DAI</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f_target">Target amount</label>
+              <input id="f_target" name="f_target" type="number" min="0" step="any" placeholder="e.g. 1,000,000" />
+            </div>
+            <div class="field">
+              <label for="f_start">Start (UTC)</label>
+              <input id="f_start" name="f_start" type="datetime-local" />
+            </div>
+            <div class="field">
+              <label for="f_end">End (UTC)</label>
+              <input id="f_end" name="f_end" type="datetime-local" />
+            </div>
+            <div class="field full">
+              <label for="f_vesting">Vesting schedule</label>
+              <input id="f_vesting" name="f_vesting" placeholder="e.g. 10% TGE, 6‑month cliff, 24‑month linear" />
+            </div>
+          </div>
+        </div>
+        <!-- Step 4: Compliance -->
+        <div class="step" data-step="4">
+          <div class="fields">
+            <div class="field">
+              <label for="c_region">Jurisdiction</label>
+              <select id="c_region" name="c_region">
+                <option>Global</option>
+                <option>EU</option>
+                <option>US</option>
+                <option>APAC</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label><input id="c_disclaimer" type="checkbox" /> I understand token launches have regulatory implications. This is not legal advice.</label>
+            </div>
+            <div class="field full">
+              <label><input id="c_terms" type="checkbox" /> I agree to ZYRA Launchpad terms and to act responsibly.</label>
+            </div>
+          </div>
+        </div>
+        <!-- Step 5: Review -->
+        <div class="step" data-step="5">
+          <div class="fields">
+            <div class="field full">
+              <label>Manifest preview</label>
+              <pre class="preview" id="manifestPreview">{}</pre>
+              <div class="hint">This JSON is signed with your wallet (optional) and can be used by deployment scripts.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="left">
+            <button type="button" class="btn btn-ghost" id="prevStep">◀ Back</button>
+          </div>
+          <div class="right">
+            <button type="button" class="btn" id="saveDraft">Save draft</button>
+            <button type="button" class="btn" id="downloadManifest">Download JSON</button>
+            <button type="button" class="btn" id="signManifest">Sign manifest</button>
+            <button type="button" class="btn btn-success" id="deployProject">Deploy</button>
+            <button type="button" class="btn btn-primary" id="nextStep">Next ▶</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <h3 style="margin:1.5rem 0 .5rem">Your Projects</h3>
+    <div id="projectsGrid" class="gallery"></div>
+  </section>
+
+  <footer>© 2025 ZYRA Blockchain • DeFi analytics</footer>
+
+  <script>
+    (function initParticles() {
+      const host = document.getElementById('particles');
+      if (!host) return;
+      const n = 60;
+      const w = () => window.innerWidth; const h = () => window.innerHeight;
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        reset(d, true);
+        host.appendChild(d);
+      }
+      function reset(el, first=false) {
+        const sz = 1 + Math.random()*2.5;
+        el.style.width = sz + 'px'; el.style.height = sz + 'px';
+        el.style.left = Math.random()*w() + 'px'; el.style.top  = Math.random()*h() + 'px';
+        el.style.opacity = String(.35 + Math.random()*.55);
+        const hue = 130 + Math.random()*30;
+        el.style.background = `hsl(${hue}, 85%, 70%)`;
+        el.style.boxShadow = `0 0 ${2+Math.random()*6}px hsl(${hue}, 85%, 60%)`;
+        const driftX = -40 + Math.random()*80; const driftY = -30 + Math.random()*60; const dur = 6 + Math.random()*6;
+        el.animate([{ transform: 'translate(0,0)' },{ transform: `translate(${driftX}px, ${driftY}px)` }], { duration: dur*1000, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out', delay: first ? Math.random()*3000 : 0 });
+      }
+      window.addEventListener('resize', () => { [...host.children].forEach(c => reset(c)); });
+    })();
+
+    function animateNumber(el, to, opts={}) {
+      const { prefix='', suffix='', duration=1200, decimals=0 } = opts;
+      const start = performance.now(); const from = 0;
+      const fmt = (v) => prefix + v.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + suffix;
+      function tick(t) { const k = Math.min(1, (t - start)/duration); const eased = 1 - Math.pow(1 - k, 4); const v = from + (to - from) * eased; el.textContent = fmt(v); if (k < 1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    }
+
+    function updateStats() {
+      animateNumber(document.getElementById('statTVL'), 1_200_000_000 + Math.random()*80_000_000, { prefix: '$', decimals: 0 });
+      animateNumber(document.getElementById('statPools'), 1200 + Math.random()*120, { decimals: 0 });
+      animateNumber(document.getElementById('statAPY'), 8 + Math.random()*4, { suffix: '%', decimals: 1 });
+      animateNumber(document.getElementById('statChains'), 12 + Math.random()*3, { decimals: 0 });
+    }
+    setInterval(updateStats, 3500); updateStats();
+
+    const cssVars = () => {
+      const cs = getComputedStyle(document.documentElement);
+      return {
+        grid: cs.getPropertyValue('--chart-grid').trim(),
+        gridWeak: cs.getPropertyValue('--chart-grid-weak').trim(),
+        tick: cs.getPropertyValue('--chart-tick').trim(),
+        tbg: cs.getPropertyValue('--tooltip-bg').trim(),
+        ttitle: cs.getPropertyValue('--tooltip-title').trim(),
+        tbody: cs.getPropertyValue('--tooltip-body').trim(),
+        tborder: cs.getPropertyValue('--tooltip-border').trim(),
+      };
+    };
+    let C = cssVars();
+
+    const tvlCtx = document.getElementById('chartTVL').getContext('2d');
+    const apyCtx = document.getElementById('chartAPY').getContext('2d');
+    const tvl = new Chart(tvlCtx, {
+      type: 'line',
+      data: { labels: Array.from({length: 24}, (_,i)=>`M${i+1}`), datasets: [{
+        label: 'TVL', data: Array.from({length:24}, ()=> 1000 + Math.random()*200).map(v=>v*1_000_000),
+        borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', fill: true, tension: .35, pointRadius: 0
+      }]},
+      options: {
+        responsive: true,
+        plugins: { legend: { display:false }, tooltip: { mode: 'index', intersect: false, backgroundColor: C.tbg, titleColor: C.ttitle, bodyColor: C.tbody, borderColor: C.tborder, borderWidth: 1, callbacks: { label: (ctx)=> '$' + ctx.parsed.y.toLocaleString() } } },
+        scales: {
+          x: { ticks: { color: C.tick }, grid: { color: C.gridWeak } },
+          y: { beginAtZero: false, ticks: { color: C.tick, callback: v => '$'+Number(v).toLocaleString() }, grid: { color: C.grid } }
+        }
+      }
+    });
+    const apy = new Chart(apyCtx, {
+      type: 'bar',
+      data: { labels: ['Stable','Blue‑chip','Long‑tail','LP Farms','Lending'], datasets: [{
+        label: 'APY %', data: [6, 8, 14, 18, 10].map(v=> v + Math.random()*4),
+        backgroundColor: '#84cc16', borderRadius: 6
+      }]},
+      options: {
+        responsive: true,
+        plugins: { legend: { display:false }, tooltip: { backgroundColor: C.tbg, titleColor: C.ttitle, bodyColor: C.tbody, borderColor: C.tborder, borderWidth: 1 } },
+        scales: {
+          x: { ticks: { color: C.tick }, grid: { color: C.gridWeak } },
+          y: { beginAtZero: true, ticks: { color: C.tick, callback: v => v+'%' }, grid: { color: C.grid } }
+        }
+      }
+    });
+
+    (function themeToggle(){
+      const btn = document.getElementById('themeBtn');
+      function applyTheme(theme){
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        C = cssVars();
+        [tvl, apy].forEach(ch => { if (!ch) return; const s = ch.options.scales; if (s?.x) { s.x.ticks.color = C.tick; s.x.grid.color = C.gridWeak; } if (s?.y) { s.y.ticks.color = C.tick; s.y.grid.color = C.grid; } ch.options.plugins.tooltip.backgroundColor = C.tbg; ch.options.plugins.tooltip.titleColor = C.ttitle; ch.options.plugins.tooltip.bodyColor = C.tbody; ch.options.plugins.tooltip.borderColor = C.tborder; ch.update('none'); });
+        if (btn) btn.textContent = theme === 'light' ? '🌞' : '🌗';
+      }
+      const saved = localStorage.getItem('theme');
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      applyTheme(saved || (prefersLight ? 'light' : 'quantum'));
+      if (btn) btn.addEventListener('click', ()=>{ const cur = document.documentElement.getAttribute('data-theme') || 'quantum'; applyTheme(cur === 'light' ? 'quantum' : 'light'); });
+    })();
+
+    (function wallet() {
+      const btn = document.getElementById('walletBtn');
+      const state = document.getElementById('walletState');
+      let connected = false; let addr = ''; let provider = null;
+      async function connect(){
+        if (typeof window.ethereum === 'undefined') { alert('MetaMask not detected. Please install MetaMask.'); return; }
+        try {
+          provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+          await provider.send('eth_requestAccounts', []);
+          const signer = provider.getSigner(); addr = await signer.getAddress(); connected = true;
+          state.textContent = addr.slice(0,6)+'...'+addr.slice(-4); state.style.background = 'rgba(34,197,94,.15)'; btn.textContent = 'Disconnect';
+          const bal = await provider.getBalance(addr); state.title = `Balance: ${ethers.utils.formatEther(bal)} ETH`;
+          window.ethereum.on('accountsChanged', handleAccounts); window.ethereum.on('chainChanged', () => window.location.reload());
+        } catch (err) { alert('Wallet connection failed: ' + (err?.message || err)); }
+      }
+      function disconnect(){ connected = false; addr = ''; state.textContent = 'Not Connected'; state.style.background = 'var(--glass)'; state.title = ''; btn.textContent = 'Connect Wallet'; try { window.ethereum?.removeListener('accountsChanged', handleAccounts); } catch {} }
+      async function handleAccounts(accounts){ if (!accounts || !accounts.length) { disconnect(); return; } addr = accounts[0]; state.textContent = addr.slice(0,6)+'...'+addr.slice(-4); if (provider) { const bal = await provider.getBalance(addr); state.title = `Balance: ${ethers.utils.formatEther(bal)} ETH`; } }
+      btn.addEventListener('click', async () => { if (!connected) await connect(); else disconnect(); });
+    })();
+
+    // Launchpad wizard logic
+    (function launchpad(){
+      const stepsEl = document.getElementById('steps');
+      const form = document.getElementById('launchForm');
+      const preview = document.getElementById('manifestPreview');
+      const grid = document.getElementById('projectsGrid');
+      const prevBtn = document.getElementById('prevStep');
+      const nextBtn = document.getElementById('nextStep');
+      const saveBtn = document.getElementById('saveDraft');
+      const dlBtn = document.getElementById('downloadManifest');
+      const signBtn = document.getElementById('signManifest');
+      const deployBtn = document.getElementById('deployProject');
+
+      if (!form) return;
+
+      const q = (id) => document.getElementById(id);
+      let step = 1; const maxStep = 5;
+
+      function setStep(n){
+        step = Math.max(1, Math.min(maxStep, n));
+        [...document.querySelectorAll('.step')].forEach(s=> s.classList.toggle('active', Number(s.dataset.step)===step));
+        [...stepsEl.children].forEach((li,i)=> li.classList.toggle('active', i < step));
+        prevBtn.disabled = step===1; nextBtn.textContent = step===maxStep ? 'Finish' : 'Next ▶';
+        if (step===maxStep) updatePreview();
+      }
+
+      function parseList(text){
+        return (text||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      }
+
+      function computeMerkleRoot(addresses){
+        try {
+          const leaves = addresses.map(a => ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['address'], [a]))).sort();
+          if (leaves.length===0) return '0x' + '0'.repeat(64);
+          let level = leaves;
+          while (level.length > 1) {
+            const next = [];
+            for (let i=0;i<level.length;i+=2){
+              const left = level[i];
+              const right = level[i+1] || left;
+              const packed = ethers.utils.solidityKeccak256(['bytes32','bytes32'], [left, right]);
+              next.push(packed);
+            }
+            level = next.sort();
+          }
+          return level[0];
+        } catch(e){ return ''; }
+      }
+
+      function collect(){
+        const whitelist = parseList(q('t_whitelist').value);
+        const root = computeMerkleRoot(whitelist);
+        return {
+          project: {
+            name: q('p_name').value.trim(),
+            tagline: q('p_tagline').value.trim(),
+            website: q('p_site').value.trim(),
+            repo: q('p_repo').value.trim(),
+            category: q('p_category').value,
+            description: q('p_desc').value.trim(),
+          },
+          token: {
+            name: q('t_name').value.trim(),
+            symbol: q('t_symbol').value.trim(),
+            decimals: Number(q('t_decimals').value || 18),
+            initialSupply: q('t_supply').value.trim(),
+            type: q('t_mintable').value,
+            whitelist,
+            whitelistRoot: root
+          },
+          funding: {
+            currency: q('f_currency').value,
+            target: q('f_target').value.trim(),
+            start: q('f_start').value,
+            end: q('f_end').value,
+            vesting: q('f_vesting').value.trim(),
+          },
+          compliance: {
+            region: q('c_region').value,
+            disclaimer: q('c_disclaimer').checked,
+            terms: q('c_terms').checked,
+          },
+          meta: {
+            createdAt: new Date().toISOString(),
+            network: (window.ethereum && window.ethereum.chainId) ? window.ethereum.chainId : null,
+          }
+        };
+      }
+
+      function slug(str){
+        return (str||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')
+      }
+
+      function updatePreview(){
+        const m = collect();
+        preview.textContent = JSON.stringify(m, null, 2);
+      }
+
+      function loadProjects(){
+        try { return JSON.parse(localStorage.getItem('zyra.projects')||'[]'); } catch { return []; }
+      }
+      function saveProjects(list){ localStorage.setItem('zyra.projects', JSON.stringify(list)); }
+
+      function renderGrid(){
+        const list = loadProjects();
+        if (!grid) return;
+        grid.innerHTML = list.map(p => {
+          const id = p.id || slug(p.project?.name);
+          return `<div class="proj"><h4>${p.project?.name||'Untitled'}</h4>
+            <div class="meta">${p.project?.tagline||''}</div>
+            <div class="meta">Token: ${p.token?.symbol||''} · ${p.token?.name||''}</div>
+            <div style="margin-top:.6rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+              <button class="btn" data-act="export" data-id="${id}">Export</button>
+              <button class="btn" data-act="copy" data-id="${id}">Copy</button>
+              <button class="btn" data-act="delete" data-id="${id}">Delete</button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      function download(filename, text){
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+        a.download = filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+      }
+
+      prevBtn.addEventListener('click', ()=> setStep(step-1));
+      nextBtn.addEventListener('click', ()=> {
+        if (step < maxStep) setStep(step+1); else {
+          // Finish: save draft
+          saveBtn.click();
+        }
+      });
+      ;['input','change','keyup'].forEach(ev=> form.addEventListener(ev, ()=> { if(step===maxStep) updatePreview(); }));
+
+      saveBtn.addEventListener('click', ()=>{
+        const data = collect(); const list = loadProjects();
+        const id = slug(data.project.name) || ('proj-'+Date.now());
+        const existIdx = list.findIndex(x => (x.id||'') === id);
+        const item = Object.assign({ id }, data);
+        if (existIdx>=0) list[existIdx] = item; else list.push(item);
+        saveProjects(list); renderGrid(); updatePreview();
+      });
+
+      dlBtn.addEventListener('click', ()=>{
+        const data = collect(); download((slug(data.project.name)||'project')+'-manifest.json', JSON.stringify(data, null, 2));
+      });
+
+      signBtn.addEventListener('click', async ()=>{
+        try {
+          if (!window.ethereum) { alert('Connect a wallet to sign'); return; }
+          const provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+          const signer = provider.getSigner();
+          const addr = await signer.getAddress();
+          const data = collect();
+          const toSign = JSON.stringify(data);
+          const sig = await signer.signMessage(toSign);
+          const withSig = Object.assign({}, data, { meta: Object.assign({}, data.meta, { owner: addr, signature: sig }) });
+          preview.textContent = JSON.stringify(withSig, null, 2);
+          // persist
+          const list = loadProjects();
+          const id = slug(withSig.project.name) || ('proj-'+Date.now());
+          const existIdx = list.findIndex(x => (x.id||'') === id);
+          const item = Object.assign({ id }, withSig);
+          if (existIdx>=0) list[existIdx] = item; else list.push(item);
+          saveProjects(list); renderGrid();
+        } catch (e) {
+          alert('Signing failed: ' + (e?.message||e));
+        }
+      });
+
+      // Queue deployment to backend
+      deployBtn.addEventListener('click', async ()=>{
+        try {
+          const data = preview?.textContent?.trim() ? JSON.parse(preview.textContent) : collect();
+          const resp = await fetch((window.ZYRA_API || 'http://localhost:3001') + '/api/launchpad/deploy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const out = await resp.json();
+          if (!resp.ok) throw new Error(out?.error || 'Request failed');
+          alert('Deployment queued: ' + (out.taskId || 'task')); 
+        } catch (e) {
+          alert('Deploy failed: ' + (e?.message || e));
+        }
+      });
+
+      grid.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-act]'); if (!btn) return;
+        const act = btn.dataset.act; const id = btn.dataset.id; const list = loadProjects();
+        const idx = list.findIndex(x=> (x.id||'')===id); if (idx<0) return;
+        if (act==='delete') { list.splice(idx,1); saveProjects(list); renderGrid(); }
+        if (act==='export') { download(id+'-manifest.json', JSON.stringify(list[idx], null, 2)); }
+        if (act==='copy') { navigator.clipboard.writeText(JSON.stringify(list[idx], null, 2)); btn.textContent='Copied'; setTimeout(()=>btn.textContent='Copy', 800); }
+      });
+
+      renderGrid();
+    })();
+  </script>
+</body>
+</html>
