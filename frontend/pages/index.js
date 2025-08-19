@@ -305,6 +305,14 @@ export default function Home() {
               <p className="text-blue-200 text-sm">Comprehensive guides and tutorials</p>
             </div>
           </Link>
+
+          <Link href="/bft" className="group">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/20 transition-all duration-300 transform hover:scale-105">
+              <div className="text-3xl mb-3">⚖️</div>
+              <h3 className="text-lg font-bold text-white mb-2">BFT Visualizer</h3>
+              <p className="text-blue-200 text-sm">HotStuff view-change simulator</p>
+            </div>
+          </Link>
         </div>
 
         {/* Features Section */}
