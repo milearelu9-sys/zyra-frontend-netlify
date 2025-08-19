@@ -156,13 +156,6 @@
     .toast .t-msg{flex:1}
     .toast .t-close{background:transparent;border:0;color:var(--text-dim);cursor:pointer}
 
-    /* Presale status bar */
-    .prebar{position:sticky;top:64px;z-index:45;background:linear-gradient(180deg, rgba(8,12,24,.65), rgba(8,12,24,.35));backdrop-filter:blur(8px);border-bottom:1px solid var(--glass-border)}
-    .prebar .inner{max-width:1200px;margin:0 auto;padding:.5rem 1.25rem;display:flex;gap:1rem;align-items:center}
-    .prebar .prog{flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--glass-border)}
-    .prebar .prog>i{display:block;height:100%;width:0;background:linear-gradient(90deg, var(--q-primary), var(--q-accent));box-shadow:var(--shadow-q)}
-    .prebar .meta{font-family:'JetBrains Mono',monospace;color:var(--text-dim);font-size:.85rem}
-
     /* Language switch button */
     #langBtn{margin-left:.25rem}
 
@@ -218,14 +211,6 @@
       </div>
     </div>
   </header>
-
-  <div class="prebar" id="presaleBar" style="display:none">
-    <div class="inner">
-      <div class="meta" id="preCountdown">Presale starts soon…</div>
-      <div class="prog" aria-label="Presale progress"><i id="preProgFill" style="width:0%"></i></div>
-      <div class="meta"><span id="preSold">0</span>/<span id="preTarget">0</span></div>
-    </div>
-  </div>
 
   <main id="overview" class="hero" role="main">
     <h1 class="h-title">Ultra‑Advanced Quantum Blockchain Intelligence</h1>
@@ -387,6 +372,44 @@
       }
     };
 
+    // Live TPS, Latency, Finality metrics
+    (function liveStats(){
+      const statTPS = document.getElementById('statTPS');
+      const statLatency = document.getElementById('statLatency');
+      const statFinality = document.getElementById('statFinality');
+      let provider;
+      try {
+        provider = typeof window.ethereum !== 'undefined'
+          ? new ethers.providers.Web3Provider(window.ethereum, 'any')
+          : ethers.getDefaultProvider();
+      } catch {}
+      if(provider){
+        let lastTs = null; let avgBlock = null; let avgTPS = null; const alpha = 0.3;
+        provider.on('block', async (bn)=>{
+          try{
+            const block = await provider.getBlock(bn);
+            const ts = Number(block?.timestamp || 0);
+            const txc = Array.isArray(block?.transactions) ? block.transactions.length : 0;
+            if(lastTs){
+              const dt = Math.max(1, ts - lastTs); // seconds
+              const tpsNow = txc / dt;
+              avgTPS = avgTPS==null ? tpsNow : (alpha*tpsNow + (1-alpha)*avgTPS);
+              avgBlock = avgBlock==null ? dt : (alpha*dt + (1-alpha)*avgBlock);
+              if(statTPS) statTPS.textContent = avgTPS.toFixed(2);
+              if(statFinality) statFinality.textContent = avgBlock.toFixed(2) + 's/block';
+            }
+            lastTs = ts || lastTs;
+          }catch{}
+        });
+        async function ping(){
+          const t0 = performance.now();
+          try{ await provider.getBlockNumber(); const ms = performance.now()-t0; if(statLatency) statLatency.textContent = Math.round(ms)+' ms RPC'; }
+          catch{}
+        }
+        ping(); setInterval(ping, 10000);
+      }
+    })();
+
     // Apply presale price labels (can be re-run after overrides load)
     function applyPresalePrice(){
       try{ const p = window.ZYRA_CONFIG?.presale; if(!p) return; const btn = document.getElementById('presaleBtn'); if(btn) btn.textContent = `Presale $${Number(p.unitUSD||0).toFixed(2)}`; const unitEl = document.getElementById('preUnit'); if(unitEl) unitEl.textContent = `$${Number(p.unitUSD||0).toFixed(2)}`; }catch{}
@@ -395,44 +418,45 @@
     // Optional: load overrides from config.local.json (written by deploy/update script)
     (async function loadConfigOverrides(){
       const deepMerge = (t, s)=>{ if(Array.isArray(s)||Array.isArray(t)) return s; if(s && typeof s==='object'){ const o={...t}; for(const k of Object.keys(s)){ o[k]=deepMerge(t?.[k], s[k]); } return o; } return s===undefined? t : s; };
-      try{
-        const res = await fetch('config.local.json', { cache: 'no-store' });
-        if(res.ok){ const o = await res.json(); window.ZYRA_CONFIG = deepMerge(window.ZYRA_CONFIG||{}, o); applyPresalePrice(); }
-      }catch{}
+    // Auth modal
+    (function ui_modals(){
+      const $ = (id)=> document.getElementById(id);
+      const open = (id)=>{ const m=$(id); if(m){ m.style.display='flex'; const first = m.querySelector('input,button,select,textarea'); if(first) setTimeout(()=>first.focus(),0); } };
+      const close = (id)=>{ const m=$(id); if(m) m.style.display='none'; };
+
+      // Donate
+      const donateBtn = $('donateBtn'); const donateCancel = $('donCancel'); const donateModal = $('donateModal');
+      if(donateBtn) donateBtn.addEventListener('click', ()=> open('donateModal'));
+      if(donateCancel) donateCancel.addEventListener('click', ()=> close('donateModal'));
+      if(donateModal) donateModal.addEventListener('click', (e)=>{ if(e.target===donateModal) close('donateModal'); });
+
+      // Auth (Sign In / Sign Up local demo)
+      const authBtn = $('authBtn'); const authModal = $('authModal'); const authCancel=$('authCancel'); const authMode=$('authMode'); const authTitle=$('authTitle'); const pass2Wrap=$('authPass2Wrap'); const authSubmit=$('authSubmit');
+      let mode = 'signin';
+      function applyAuthMode(){ if(authTitle) authTitle.textContent = mode==='signin'?'Sign In':'Create Account'; if(pass2Wrap) pass2Wrap.style.display = mode==='signup'?'block':'none'; if(authMode) authMode.textContent = mode==='signin'?'Create account':'I have an account'; }
+      function initAuthUI(){ const u = JSON.parse(localStorage.getItem('zyra:user')||'null'); if(u && authBtn) authBtn.textContent = 'Account'; }
+      if(authBtn) authBtn.disabled = false;
+      if(authBtn) authBtn.addEventListener('click', ()=>{ mode='signin'; applyAuthMode(); open('authModal'); });
+      if(authMode) authMode.addEventListener('click', ()=>{ mode = mode==='signin'?'signup':'signin'; applyAuthMode(); });
+      if(authCancel) authCancel.addEventListener('click', ()=> close('authModal'));
+      if(authModal) authModal.addEventListener('click', (e)=>{ if(e.target===authModal) close('authModal'); });
+      if(authSubmit) authSubmit.addEventListener('click', ()=>{
+        const email = $('authEmail')?.value?.trim(); const p1 = $('authPass')?.value||''; const p2 = $('authPass2')?.value||'';
+        if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('error','Enter a valid email.');
+        if(p1.length < 6) return toast('error','Password must be at least 6 characters.');
+        if(mode==='signup' && p1!==p2) return toast('error','Passwords do not match.');
+        localStorage.setItem('zyra:user', JSON.stringify({ email }));
+        if(authBtn) authBtn.textContent = 'Account';
+        toast('success', mode==='signin'?'Signed in.':'Account created.');
+        close('authModal');
+      });
+      initAuthUI();
+
+      // Esc to close any open modal
+      document.addEventListener('keydown', (e)=>{
+        if(e.key==='Escape') ['authModal','donateModal','presaleModal','claimModal'].forEach(id=> close(id));
+      });
     })();
-
-    // Sync price label in header and modal with config
-    (function syncPresaleUI(){
-      const p = ZYRA_CONFIG?.presale; if(!p) return;
-      const btn = document.getElementById('presaleBtn');
-      if(btn) btn.textContent = `Presale $${Number(p.unitUSD||0).toFixed(2)}`;
-      const unitEl = document.getElementById('preUnit');
-      if(unitEl) unitEl.textContent = `$${Number(p.unitUSD||0).toFixed(2)}`;
-    })();
-
-    // Toasts
-    function toast(type, msg, opts={}){
-      const box = document.getElementById('toasts'); if(!box) return alert(msg);
-      const el = document.createElement('div'); el.className = 'toast '+(type||'info');
-      const ico = type==='success' ? '✅' : type==='error' ? '⛔' : type==='pending' ? '⏳' : 'ℹ️';
-      el.innerHTML = `<div class="t-ico">${ico}</div><div class="t-msg">${msg}</div><button class="t-close" aria-label="Close">✖</button>`;
-      box.appendChild(el);
-      const rm = ()=>{ el.style.opacity=.0; setTimeout(()=> el.remove(), 250); };
-      el.querySelector('.t-close').addEventListener('click', rm);
-      setTimeout(rm, opts.ttl ?? 5000);
-      return { close: rm, el };
-    }
-    // Route all alerts to toasts (non-blocking)
-    (function patchAlert(){ const _a = window.alert; window.alert = (m)=>{ try{ toast('info', String(m)); }catch{ _a(m); } }; })();
-
-    // Presale UI state
-    (function presaleStatus(){
-      const bar = document.getElementById('presaleBar');
-      const fill = document.getElementById('preProgFill');
-      const soldEl = document.getElementById('preSold');
-      const tgtEl = document.getElementById('preTarget');
-      const cdEl = document.getElementById('preCountdown');
-      if(!bar) return;
       const ps = ZYRA_CONFIG.presale;
       tgtEl.textContent = String(ps.targetUnits);
       function data(){
