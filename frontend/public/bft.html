@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZYRA | Ultra‑Advanced BFT Visualizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(135deg, #0a0f0a 0%, #1a1a2e 100%); color: #e8fcea; font-family: Inter, JetBrains Mono, Orbitron, monospace; margin: 0; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 18px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+    .title { font-size: 2.2rem; font-weight: 900; letter-spacing: .04em; }
+    .btn { background: linear-gradient(45deg, #00ff95, #16a34a); color: #021412; border: 0; padding: 10px 18px; border-radius: 10px; font-weight: 800; cursor: pointer; text-decoration: none; margin-right: 10px; }
+    .btn:hover { background: linear-gradient(45deg, #16a34a, #00ff95); }
+    .panel { background: rgba(0,255,136,0.05); border: 1px solid #00ff95; border-radius: 14px; padding: 18px; margin-bottom: 24px; }
+    .mono { font-family: JetBrains Mono, monospace; font-size: 13px; }
+    .event-log { max-height: 220px; overflow-y: auto; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; margin-top: 12px; }
+    .node { display: inline-block; background: #121826; border: 1px solid #00ff95; border-radius: 10px; padding: 10px; margin: 6px; min-width: 120px; }
+    .leader { background: #ffd70022; border-color: #ffd700; }
+    .byz { background: #ff6b6b22; border-color: #ff6b6b; }
+    .label { color: #a9f5c9; font-size: 0.95em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">⚖️ Ultra-Advanced BFT (HotStuff) Visualizer</div>
+<a href="index.html" class="btn">← Back to Dashboard</a>
+    </div>
+    <div id="bft-root"></div>
+  </div>
+  <script>
+// Ultra-Advanced BFT Visualizer (Vanilla JS)
+function createRng(seedStr = 'zyra') {
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+  let s = (h || 1) >>> 0;
+  return { random(){ s = (1664525 * s + 1013904223) >>> 0; return (s >>> 0) / 0x100000000; } };
+}
+function randn(rng, mean = 0, std = 1) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng.random();
+  while (v === 0) v = rng.random();
+  return mean + std * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// Main BFT simulator logic
+(function(){
+  let cfg = {
+    n: 4,
+    f: 1,
+    leaderPolicy: 'round-robin',
+    baseLatency: 120,
+    jitter: 40,
+    dropRate: 0.02,
+    timeout: 1200,
+    optimistic: true,
+    byzantine: [],
+    byzEquivocate: true,
+    byzVoteDropProb: 0.0,
+    byzVoteDelay: 0,
+    partition: { enabled: false, until: 0 }
+  };
+  let seed = 'zyra';
+  let rng = createRng(seed);
+  let running = false;
+  let speed = 1;
+  let view = 1;
+  let height = 1;
+  let lockedQC = null;
+  let log = [];
+  let safety = { equivocations: 0, safetyOk: true };
+  let liveness = { stalledViews: 0, lastCommitView: 0 };
+  let metrics = { sent: 0, dropped: 0, delivered: 0, avgLatency: 0, commits: 0 };
+  let nodes = [];
+  let events = [];
+  let t = { now: 0, deadline: cfg.timeout };
+  let leader = 0;
+  let lastTimedOut = false;
+  let state = { view: 1, proposeQC: 0, genVotes: new Set(), preCommitVotes: new Set(), commitVotes: new Set(), chain: [] };
+  let metricsState = { sent: 0, dropped: 0, delivered: 0, latencySum: 0, latencyCount: 0, commits: 0 };
+
+  function appendLog(line) { log.unshift(line); if(log.length>200) log.length=200; }
+  function pickLeader(v) {
+    switch (cfg.leaderPolicy) {
+      case 'sticky': return leader;
+      case 'random': leader = Math.floor(rng.random() * cfg.n); return leader;
+      case 'hotshot':
+        if (lastTimedOut) leader = (leader + 1) % cfg.n;
+        return leader;
+      case 'round-robin':
+      default: return (v - 1) % cfg.n;
+    }
+  }
+  function startView(v) {
+    leader = pickLeader(v);
+    state.view = v;
+    state.genVotes.clear();
+    state.preCommitVotes.clear();
+    state.commitVotes.clear();
+    t.deadline = t.now + Math.max(50, cfg.timeout / speed);
+    appendLog(`▶ view ${v} leader n${leader}`);
+    proposeBlock(leader, v);
+    render();
+  }
+  function schedule(from, to, type, payload) {
+    if (cfg.partition?.enabled && t.now < cfg.partition.until) {
+      const groupA = (i) => i < Math.floor(cfg.n / 2);
+      if (groupA(from) !== groupA(to)) { metricsState.sent++; metricsState.dropped++; return; }
+    }
+    if (rng.random() < cfg.dropRate) { metricsState.sent++; metricsState.dropped++; return; }
+    let latency = clamp(randn(rng, cfg.baseLatency, cfg.jitter), Math.max(5, cfg.baseLatency - 3 * cfg.jitter), cfg.baseLatency + 3 * cfg.jitter);
+    if (nodes[from]?.byz && /^VOTE/.test(type)) latency += cfg.byzVoteDelay;
+    const sentAt = t.now;
+    const at = sentAt + Math.max(1, latency / speed);
+    events.push({ at, sentAt, from, to, type, payload });
+    metricsState.sent++;
+  }
+  function broadcast(from, type, payload) { for (let to = 0; to < cfg.n; to++) { if (to !== from) schedule(from, to, type, payload); } }
+  function proposeBlock(leader, v) {
+    const blockId = `${v}-${Math.floor(rng.random() * 1e6).toString(36)}`;
+    state.chain.push({ view: v, blockId });
+    const payload = { v, blockId, justifyQC: Math.max(lockedQC || 0, state.proposeQC || 0) };
+    if (nodes[leader].byz && cfg.byzEquivocate) {
+      const blockId2 = `${v}-X${Math.floor(rng.random() * 1e6).toString(36)}`;
+      broadcast(leader, 'PROPOSE', { ...payload, blockId });
+      broadcast(leader, 'PROPOSE', { ...payload, blockId: blockId2 });
+      safety.equivocations++;
+      safety.safetyOk = false;
+      appendLog(`⚠ leader n${leader} equivocated in view ${v}`);
+    } else {
+      broadcast(leader, 'PROPOSE', payload);
+    }
+  }
+  function onPropose(msg) {
+    const { v, blockId, justifyQC } = msg.payload;
+    const node = nodes[msg.to];
+    if (v !== state.view) return;
+    const safe = v > node.lockedView && justifyQC >= node.lockedView;
+    if (!safe) return;
+    node.highQC = Math.max(node.highQC, justifyQC, v - 1);
+    node.votedView = v;
+    if (node.byz && rng.random() < cfg.byzVoteDropProb) return;
+    schedule(msg.to, pickLeader(v), 'VOTE-GEN', { v, blockId });
+    if (cfg.optimistic) t.deadline = Math.max(t.deadline, t.now + (cfg.timeout * 0.6) / speed);
+  }
+  function onVoteGen(msg) {
+    const { v, blockId } = msg.payload;
+    if (v !== state.view) return;
+    state.genVotes.add(msg.from);
+    if (state.genVotes.size >= cfg.n - cfg.f) {
+      state.proposeQC = v;
+      broadcast(pickLeader(v), 'VOTE-PRE', { v, blockId });
+    }
+  }
+  function onVotePre(msg) {
+    const { v, blockId } = msg.payload;
+    const node = nodes[msg.to];
+    if (v !== state.view) return;
+    node.lockedView = Math.max(node.lockedView, v);
+    if (node.byz && rng.random() < cfg.byzVoteDropProb * 0.5) return;
+    schedule(msg.to, pickLeader(v), 'VOTE-COMMIT', { v, blockId });
+  }
+  function onVoteCommit(msg) {
+    const { v } = msg.payload;
+    if (v !== state.view) return;
+    state.commitVotes.add(msg.from);
+    if (state.commitVotes.size >= cfg.n - cfg.f) {
+      height = Math.max(height, v - 1);
+      lockedQC = v;
+      liveness.lastCommitView = v;
+      metricsState.commits++;
+      appendLog(`✅ commit at view ${v} (height ≈ ${height})`);
+      lastTimedOut = false;
+      setTimeout(() => { view++; startView(view); render(); }, 0);
+    }
+  }
+  function reset() {
+    events = [];
+    t.now = 0;
+    view = 1;
+    height = 1;
+    lockedQC = null;
+    safety = { equivocations: 0, safetyOk: true };
+    liveness = { stalledViews: 0, lastCommitView: 0 };
+    metricsState = { sent: 0, dropped: 0, delivered: 0, latencySum: 0, latencyCount: 0, commits: 0 };
+    appendLog('↺ reset');
+    startView(view);
+    render();
+  }
+  function applyPreset(name) {
+    running = false;
+    switch (name) {
+      case 'stable': cfg = { ...cfg, n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 120, jitter: 10, dropRate: 0.0, timeout: 1000, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }; appendLog('🎛 Preset: Stable network'); break;
+      case 'flaky': cfg = { ...cfg, n: 4, f: 1, leaderPolicy: 'round-robin', baseLatency: 140, jitter: 80, dropRate: 0.10, timeout: 1500, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0.1, byzVoteDelay: 0, partition: { enabled:false, until:0 } }; appendLog('🎛 Preset: Flaky network'); break;
+      case 'byz-leader': cfg = { ...cfg, n: 4, f: 1, leaderPolicy: 'sticky', baseLatency: 120, jitter: 20, dropRate: 0.0, timeout: 1200, optimistic: true, byzantine: [0], byzEquivocate: true, byzVoteDropProb: 0.0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }; appendLog('🎛 Preset: Byzantine leader (n0)'); break;
+      case 'geo-latency': cfg = { ...cfg, n: 7, f: 2, leaderPolicy: 'round-robin', baseLatency: 600, jitter: 120, dropRate: 0.02, timeout: 2500, optimistic: true, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0, byzVoteDelay: 0, partition: { enabled:false, until:0 } }; appendLog('🎛 Preset: High-latency geo spread'); break;
+      case 'stress': cfg = { ...cfg, n: 10, f: 3, leaderPolicy: 'round-robin', baseLatency: 200, jitter: 200, dropRate: 0.30, timeout: 3000, optimistic: false, byzantine: [], byzEquivocate: false, byzVoteDropProb: 0.2, byzVoteDelay: 50, partition: { enabled:false, until:0 } }; appendLog('🎛 Preset: Stress (drops + jitter)'); break;
+    }
+    reset();
+  }
+  function render() {
+    nodes = Array.from({ length: cfg.n }, (_, i) => ({
+      id: i,
+      lockedView: 0,
+      highQC: 0,
+      votedView: 0,
+      byz: cfg.byzantine.includes(i),
+    }));
+    var root = document.getElementById('bft-root');
+    root.innerHTML = `
+      <div class="panel">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <button onclick="window.bftStart()" class="btn">Start</button>
+          <button onclick="window.bftPause()" class="btn">Pause</button>
+          <button onclick="window.bftStep()" class="btn">Step View</button>
+          <button onclick="window.bftReset()" class="btn">Reset</button>
+          <button onclick="window.bftPreset('stable')" class="btn">Stable</button>
+          <button onclick="window.bftPreset('flaky')" class="btn">Flaky</button>
+          <button onclick="window.bftPreset('byz-leader')" class="btn">Byz Leader</button>
+          <button onclick="window.bftPreset('geo-latency')" class="btn">Geo Latency</button>
+          <button onclick="window.bftPreset('stress')" class="btn">Stress</button>
+        </div>
+        <div class="mono label">View: ${view} • Leader: n${leader} • Quorum: ${cfg.n-cfg.f} • Height: ${height} • LockedQC: ${lockedQC??'-'}<br>
+        Safety: <span style="color:${safety.safetyOk?'#22c55e':'#ff6b6b'}">${safety.safetyOk?'OK':'Violated'}</span> (equivocations: ${safety.equivocations})<br>
+        Liveness: stalled views ${liveness.stalledViews}, last commit at view ${liveness.lastCommitView}<br>
+        Msgs sent ${metricsState.sent} • dropped ${metricsState.dropped} • delivered ${metricsState.delivered} • avg latency ${(metricsState.latencyCount?metricsState.latencySum/metricsState.latencyCount:0).toFixed(1)} ms • commits ${metricsState.commits}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="mono label">Nodes:</div>
+        <div>
+          ${nodes.map(n=>`<div class="node${n.byz?' byz':''}${leader===n.id?' leader':''}">
+            <div>n${n.id} ${leader===n.id?'<span style="color:#ffd700">(leader)</span>':''}</div>
+            <div>lockedView: ${n.lockedView}</div>
+            <div>highQC: ${n.highQC}</div>
+            <div>votedView: ${n.votedView}</div>
+            <div>byzantine: ${n.byz?'yes':'no'}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="mono label">Event log:</div>
+        <div class="event-log mono">${log.map(l=>`<div>${l}</div>`).join('')}</div>
+      </div>
+    `;
+  }
+  window.bftStart = function(){ running=true; tick(); };
+  window.bftPause = function(){ running=false; };
+  window.bftStep = function(){ view++; startView(view); render(); };
+  window.bftReset = function(){ reset(); };
+  window.bftPreset = function(name){ applyPreset(name); };
+  function tick(){
+    if(!running) return;
+    t.now += 16 * speed;
+    if (t.now > t.deadline) {
+      liveness.stalledViews++;
+      lastTimedOut = true;
+      if (cfg.leaderPolicy === 'sticky') {
+        t.deadline = t.now + (cfg.timeout * 1.5) / speed;
+      } else {
+        view++;
+        startView(view);
+      }
+      appendLog(`⏱ view ${state.view} timeout → view-change`);
+    }
+    events.sort((a, b) => a.at - b.at);
+    while (events.length && events[0].at <= t.now) {
+      const ev = events.shift();
+      metricsState.delivered++;
+      const lat = (t.now - ev.sentAt);
+      metricsState.latencySum += lat; metricsState.latencyCount++;
+      switch (ev.type) {
+        case 'PROPOSE': onPropose(ev); break;
+        case 'VOTE-GEN': onVoteGen(ev); break;
+        case 'VOTE-PRE': onVotePre(ev); break;
+        case 'VOTE-COMMIT': onVoteCommit(ev); break;
+      }
+    }
+    metrics = { sent: metricsState.sent, dropped: metricsState.dropped, delivered: metricsState.delivered, avgLatency: metricsState.latencyCount? (metricsState.latencySum / metricsState.latencyCount) : 0, commits: metricsState.commits };
+    render();
+    setTimeout(tick, 60);
+  }
+  // Initial render
+  render();
+})();
+  </script>
+</body>
+</html>
