@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Security() {
+function Security() {
   const [securityData, setSecurityData] = useState({
     networkHealth: {},
     vulnerabilities: [],
@@ -611,3 +612,5 @@ export default function Security() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Security), { ssr: false });

@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Bridge() {
+function Bridge() {
   const [bridgeData, setBridgeData] = useState({
     supportedChains: [],
     transactions: [],
@@ -446,3 +447,5 @@ export default function Bridge() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Bridge), { ssr: false });

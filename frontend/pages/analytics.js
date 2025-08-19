@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Analytics() {
+function Analytics() {
   const [analyticsData, setAnalyticsData] = useState({
     networkMetrics: {},
     transactionStats: {},
@@ -296,3 +297,5 @@ export default function Analytics() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Analytics), { ssr: false });

@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Community() {
+function Community() {
   const [communityData, setCommunityData] = useState({
     stats: {},
     forums: [],
@@ -629,3 +630,5 @@ export default function Community() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Community), { ssr: false });

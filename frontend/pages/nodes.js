@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Nodes() {
+function Nodes() {
   const [nodeData, setNodeData] = useState({
     myNodes: [],
     availableNodes: [],
@@ -574,3 +575,5 @@ export default function Nodes() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Nodes), { ssr: false });

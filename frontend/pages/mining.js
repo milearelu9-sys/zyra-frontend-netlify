@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Mining() {
+function Mining() {
   const [miningData, setMiningData] = useState({
     pools: [],
     myMiners: [],
@@ -587,3 +588,5 @@ export default function Mining() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Mining), { ssr: false });

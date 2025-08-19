@@ -1,7 +1,8 @@
+import dynamic from 'next/dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-export default function Portfolio() {
+function Portfolio() {
   const [portfolioData, setPortfolioData] = useState({
     overview: {},
     assets: [],
@@ -554,3 +555,5 @@ export default function Portfolio() {
     </div>
   );
 }
+
+export default dynamic(() => Promise.resolve(Portfolio), { ssr: false });
