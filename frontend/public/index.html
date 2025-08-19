@@ -372,11 +372,24 @@
       }
     };
 
-    // Live TPS, Latency, Finality metrics
+    // Live TPS, Latency, Finality metrics (from BFT visualizer)
     (function liveStats(){
       const statTPS = document.getElementById('statTPS');
       const statLatency = document.getElementById('statLatency');
       const statFinality = document.getElementById('statFinality');
+      // If BFT visualizer is loaded, use its metrics
+      if(window.bftMetrics){
+        function updateBFT(){
+          const m = window.bftMetrics;
+          if(statTPS) statTPS.textContent = m.tps || '--';
+          if(statLatency) statLatency.textContent = m.latency || '--';
+          if(statFinality) statFinality.textContent = m.finality || '--';
+        }
+        updateBFT();
+        setInterval(updateBFT, 1000);
+        return;
+      }
+      // Otherwise, fallback to blockchain metrics
       let provider;
       try {
         provider = typeof window.ethereum !== 'undefined'
