@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZYRA • Live Blockchain Explorer</title>
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg2: #121826;
+      --panel: rgba(0,0,0,0.6);
+      --pri: #00ff88;
+      --pri2: #27e0a1;
+      --sec: #0066ff;
+      --gold: #ffd700;
+      --text: #e8f2ee;
+      --muted: #9be7c4;
+      --border: rgba(0,255,136,0.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(0,255,136,0.15), transparent),
+                  radial-gradient(900px 500px at 100% 0%, rgba(0,102,255,0.12), transparent),
+                  linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header{
+      position: sticky; top:0; z-index: 5;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.25));
+      border-bottom: 1px solid var(--border);
+    }
+    .container{ max-width: 1300px; margin: 0 auto; padding: 18px 18px; }
+    .title { font-weight: 800; letter-spacing: .3px; font-size: 22px; display:flex; align-items:center; gap:10px }
+    .title .badge { background: linear-gradient(45deg, var(--pri), var(--sec)); color:#000; padding:2px 8px; border-radius: 999px; font-size: 12px; font-weight: 800 }
+
+    .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px }
+    .pill{ border:1px solid var(--border); color: var(--muted); padding:6px 10px; border-radius:999px; background: rgba(0,255,136,0.08); font-size: 13px }
+    .btn{ background: linear-gradient(45deg, var(--pri), var(--sec)); color:#000; border:0; padding:8px 12px; border-radius:10px; font-weight:800; cursor:pointer }
+    .btn.secondary{ background: rgba(0,255,136,0.08); color: var(--muted); border:1px solid var(--border) }
+    .btn:disabled{ opacity:.6; cursor:not-allowed }
+    .search{ flex:1; min-width: 260px; display:flex; gap:8px }
+    .search input{ flex:1; background: rgba(255,255,255,0.04); color: var(--text); border:1px solid rgba(255,255,255,0.12); border-radius: 10px; padding:9px 12px; outline:none }
+
+    main{ padding: 18px; max-width: 1300px; margin: 0 auto; display:grid; grid-template-columns: 1fr 1fr; gap: 18px }
+    @media (max-width: 1100px){ main{ grid-template-columns: 1fr } }
+    .panel{ background: var(--panel); border:1px solid var(--border); border-radius: 14px; overflow:hidden }
+    .panel h3{ margin:0; padding: 14px 14px; border-bottom: 1px solid var(--border); color: var(--pri) }
+    .panel .body{ padding: 12px; max-height: 520px; overflow:auto }
+
+    .list{ display:grid; gap: 10px }
+    .item{ border:1px solid var(--border); border-radius: 12px; padding: 10px; background: rgba(0,255,136,0.05); display:grid; gap:8px }
+    .row{ display:flex; gap:12px; flex-wrap: wrap; align-items:center }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px }
+    .muted{ color: #b7cec4 }
+    .hash{ color: var(--pri); cursor: pointer }
+    .addr{ color: var(--muted) }
+    .value{ color: var(--gold); font-weight: 800 }
+    .success{ color: #3fe28f; font-weight: 700 }
+    .fail{ color: #ff6b6b; font-weight: 700 }
+
+    .details{ background: rgba(255,255,255,0.03); border:1px dashed var(--border); border-radius: 12px; padding: 12px; font-size: 13px }
+    .details pre{ margin:0; white-space: pre-wrap; word-break: break-word }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="title">🔍 ZYRA Live Explorer <span class="badge" id="net-badge">CONNECTING…</span></div>
+      <div class="toolbar">
+        <span class="pill">Latest Block: <b id="latest-block">-</b></span>
+        <span class="pill">Tx Feed: <b id="tx-count">0</b></span>
+        <button class="btn" id="btn-connect">Connect Wallet</button>
+        <button class="btn secondary" id="btn-switch">Switch to Local (31337)</button>
+        <button class="btn secondary" id="btn-send">Send Test Tx (0 ETH)</button>
+        <button class="btn secondary" id="btn-pause">Pause Live</button>
+        <button class="btn secondary" id="btn-clear">Clear</button>
+        <div class="search">
+          <input id="search" placeholder="Search tx hash / block number / block hash / address" />
+          <button class="btn" id="btn-search">Search</button>
+        </div>
+        <a class="btn secondary" id="btn-back" href="/" title="Back to Dashboard">← Back to Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h3>⛓️ Latest Blocks</h3>
+      <div class="body list" id="blocks"></div>
+    </section>
+    <section class="panel">
+      <h3>⚡ Live Transactions</h3>
+      <div class="body list" id="txs"></div>
+    </section>
+    <section class="panel" style="grid-column: 1 / -1;">
+      <h3>📋 Details</h3>
+      <div class="body">
+        <div class="details mono" id="details"><span class="muted">Select a tx or block…</span></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+  (function(){
+    const netBadge = document.getElementById('net-badge');
+    const latestBlockEl = document.getElementById('latest-block');
+    const txCountEl = document.getElementById('tx-count');
+    const blocksEl = document.getElementById('blocks');
+    const txsEl = document.getElementById('txs');
+    const detailsEl = document.getElementById('details');
+    const btnConnect = document.getElementById('btn-connect');
+    const btnSwitch = document.getElementById('btn-switch');
+    const btnSend = document.getElementById('btn-send');
+    const btnPause = document.getElementById('btn-pause');
+    const btnClear = document.getElementById('btn-clear');
+    const searchInput = document.getElementById('search');
+    const btnSearch = document.getElementById('btn-search');
+
+    let provider; let liveOn = true; let started = false; let signer = null; let account = null;
+    // New: pending tx support
+    let wsProvider = null; // optional WebSocket provider (for pending)
+    let pendingPollTimer = null; // fallback polling timer
+    const seen = new Set(); // dedupe by tx hash
+
+    // NEW: Network configuration for public deployments
+    const DEFAULTS = {
+      chainId: 31337,
+      chainHex: '0x7A69',
+      chainName: 'Hardhat Local',
+      rpcUrl: 'http://127.0.0.1:8545',
+      wsUrl: 'ws://127.0.0.1:8545'
+    };
+    function getCfg(){
+      const p = new URLSearchParams(location.search);
+      const fromLS = (k, d)=> localStorage.getItem(k) || d;
+      const cid = p.get('chainId') || fromLS('explorer.chainId', DEFAULTS.chainId);
+      const chainId = parseInt(cid, 10);
+      const cfg = {
+        chainId,
+        chainHex: p.get('chainHex') || fromLS('explorer.chainHex', null),
+        chainName: p.get('chainName') || fromLS('explorer.chainName', DEFAULTS.chainName),
+        rpcUrl: p.get('rpc') || fromLS('explorer.rpc', DEFAULTS.rpcUrl),
+        wsUrl: p.get('ws') || fromLS('explorer.ws', DEFAULTS.wsUrl)
+      };
+      cfg.chainHex = cfg.chainHex || ('0x' + Number(cfg.chainId).toString(16));
+      return cfg;
+    }
+    const CFG = getCfg();
+
+    // Helpers for wallet/chain
+    function hasMetaMask(){ return typeof window !== 'undefined' && window.ethereum && window.ethereum.isMetaMask; }
+    async function ensureLocalChain(){
+      if (!hasMetaMask()) return;
+      try{
+        const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        const net = await web3.getNetwork();
+        if (Number(net?.chainId) === Number(CFG.chainId)) return;
+        try{
+          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CFG.chainHex }] });
+        }catch(err){
+          if (err && err.code === 4902){
+            await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+              chainId: CFG.chainHex,
+              chainName: CFG.chainName,
+              nativeCurrency: { name:'ETH', symbol:'ETH', decimals:18 },
+              rpcUrls:[CFG.rpcUrl],
+              blockExplorerUrls: []
+            }]});
+          }
+        }
+      }catch{/* ignore */}
+    }
+
+    function short(s){ return s ? (s.length>18 ? s.slice(0,10)+"…"+s.slice(-6) : s) : '—'; }
+    function setDetails(obj){
+      detailsEl.innerHTML = '<pre>'+ (typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2)) +'</pre>';
+    }
+    function setBusy(el, busy){ if (!el) return; el.disabled = !!busy; el.dataset.label = el.dataset.label || el.textContent; el.textContent = busy ? 'Working…' : el.dataset.label; }
+    function updateAccountLabel(){ if (account) { btnConnect.textContent = 'Connected: '+ short(account); } else { btnConnect.textContent = 'Connect Wallet'; } }
+
+    async function ensureProvider(){
+      try{
+        // Always use a dedicated RPC provider for reading (public or local)
+        provider = new ethers.providers.JsonRpcProvider(CFG.rpcUrl);
+        const net = await provider.getNetwork();
+        const name = CFG.chainName || net.name;
+        netBadge.textContent = `Chain ${net.chainId}${name?` • ${name}`:''}`;
+
+        // If MetaMask is present, set signer/account and try to align networks lazily
+        if (window.ethereum){
+          if (window.ethereum.selectedAddress){
+            const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+            signer = web3.getSigner();
+            account = window.ethereum.selectedAddress;
+            updateAccountLabel();
+          }
+          // Best-effort chain alignment (non-blocking)
+          ensureLocalChain().catch(()=>{});
+        }
+
+        if (!started){ subscribe(); started=true; }
+        // New: set up pending tx feed
+        await setupPendingFeed();
+      }catch(e){ netBadge.textContent = 'DISCONNECTED'; console.warn(e); }
+    }
+
+    function addBlock(block){
+      const el = document.createElement('div'); el.className='item mono';
+      el.innerHTML = `
+        <div class="row">
+          <div>#${block.number}</div>
+          <div class="muted">${new Date(block.timestamp*1000).toLocaleTimeString()}</div>
+          <div class="pill">${block.transactions?.length||0} txs</div>
+          <div class="hash" title="${block.hash}">${short(block.hash)}</div>
+        </div>
+      `;
+      el.onclick = ()=> setDetails(block);
+      blocksEl.prepend(el);
+      while(blocksEl.children.length>20) blocksEl.removeChild(blocksEl.lastChild);
+    }
+
+    function addTx(tx, extra){
+      // Dedupe and update existing entries
+      const hash = tx.hash || (tx.transactionHash || '');
+      if (hash) {
+        if (seen.has(hash)) {
+          // Update existing entry if we now have block info or receipt
+          const existing = document.getElementById('tx-'+hash);
+          if (existing) {
+            // Update block number and status snippet
+            const blk = tx.blockNumber ?? extra?.blockNumber ?? '';
+            const metaNodes = existing.querySelectorAll('.muted');
+            if (metaNodes && metaNodes.length) {
+              metaNodes[0].textContent = `blk ${blk}${blk?'':' • pending'}`;
+            }
+            // Request receipt to update status
+            provider.getTransactionReceipt(hash).then(r=>{
+              const tgt = existing.querySelector('.receipt');
+              if (!tgt) return;
+              if (!r) { tgt.textContent = 'receipt: pending'; return; }
+              tgt.innerHTML = `status: <b class="${r.status? 'success':'fail'}">${r.status? 'success':'fail'}</b> • gasUsed ${r.gasUsed?.toString?.()||r.gasUsed}`;
+            }).catch(()=>{});
+            return; // don't duplicate
+          }
+        }
+      }
+
+      const el = document.createElement('div'); el.className='item mono';
+      if (hash) { el.id = 'tx-'+hash; seen.add(hash); }
+      const value = tx.value ? ethers.utils.formatEther(tx.value) : '0';
+      const blk = tx.blockNumber ?? extra?.blockNumber ?? '';
+      const gasLimit = tx.gasLimit? (tx.gasLimit.toString? tx.gasLimit.toString(): String(tx.gasLimit)) : '';
+      const gasPrice = tx.gasPrice? `@ ${ethers.utils.formatUnits(tx.gasPrice,'gwei')} gwei` : '';
+      el.innerHTML = `
+        <div class="row">
+          <div class="hash" title="${hash||'(pending)'}">${short(hash||'(pending)')}</div>
+          <div class="muted">blk ${blk}${blk?'':' • pending'}</div>
+          <div class="addr">${short(tx.from)} → ${short(tx.to)}</div>
+          <div class="value">${value} ETH</div>
+          <div class="muted">gas ${gasLimit} ${gasPrice}</div>
+          <div class="muted receipt">receipt: …</div>
+        </div>
+      `;
+      el.onclick = ()=> setDetails(tx);
+      txsEl.prepend(el);
+      while(txsEl.children.length>200) txsEl.removeChild(txsEl.lastChild);
+      txCountEl.textContent = String(txsEl.children.length);
+
+      if (hash){
+        provider.getTransactionReceipt(hash).then(r=>{
+          const tgt = el.querySelector('.receipt');
+          if (!tgt) return;
+          if (!r) { tgt.textContent = 'receipt: pending'; return; }
+          tgt.innerHTML = `status: <b class="${r.status? 'success':'fail'}">${r.status? 'success':'fail'}</b> • gasUsed ${r.gasUsed?.toString?.()||r.gasUsed}`;
+        }).catch(()=>{});
+      }
+    }
+
+    function subscribe(){
+      if (!provider) return;
+      provider.on('block', async (bn)=>{
+        if (!liveOn) return;
+        latestBlockEl.textContent = String(bn);
+        try {
+          const block = await provider.getBlockWithTransactions(bn);
+          if (block) {
+            addBlock(block);
+            if (Array.isArray(block.transactions)) {
+              for (const tx of block.transactions) addTx(tx, { blockNumber: block.number });
+            }
+          }
+        } catch(e){ console.warn('block fetch failed', e); }
+      });
+
+      if (provider.provider && provider.provider.on){
+        provider.provider.on('chainChanged', async ()=>{
+          try{ const net = await provider.getNetwork(); netBadge.textContent = `Chain ${net.chainId}${net.name?` • ${net.name}`:''}`; }catch{}
+        });
+        provider.provider.on('accountsChanged', async (accts)=>{
+          account = Array.isArray(accts) && accts.length ? accts[0] : null; signer = account ? provider.getSigner() : null; updateAccountLabel();
+        });
+      }
+    }
+
+    // New: Pending transactions via WebSocket (fallback to polling)
+    async function setupPendingFeed(){
+      // Try to initialize a WebSocket provider for pending tx using CFG.wsUrl
+      if (!wsProvider) {
+        try {
+          let wsUrl = CFG.wsUrl;
+          if (!wsUrl) {
+            const httpUrl = (provider && provider.connection && provider.connection.url) ? provider.connection.url : CFG.rpcUrl;
+            wsUrl = httpUrl.replace(/^http/i, 'ws');
+          }
+          wsProvider = new ethers.providers.WebSocketProvider(wsUrl);
+          subscribePending();
+          return;
+        } catch (e) {
+          wsProvider = null;
+        }
+      }
+      // Fallback: poll the pending block periodically
+      startPendingPolling();
+    }
+
+    function subscribePending(){
+      if (!wsProvider) return;
+      try {
+        wsProvider.on('pending', async (txHash) => {
+          if (!liveOn) return;
+          if (!txHash || seen.has(txHash)) return;
+          try {
+            const tx = await wsProvider.getTransaction(txHash);
+            if (tx) addTx(tx);
+          } catch (_) {}
+        });
+        // Keep the network badge in sync if ws disconnects
+        wsProvider._websocket && wsProvider._websocket.addEventListener('close', () => {
+          wsProvider = null;
+          startPendingPolling();
+        });
+      } catch (_) {
+        wsProvider = null;
+        startPendingPolling();
+      }
+    }
+
+    function startPendingPolling(){
+      if (pendingPollTimer) return;
+      pendingPollTimer = setInterval(async ()=>{
+        if (!liveOn || !provider) return;
+        try{
+          const pending = await provider.send('eth_getBlockByNumber', ['pending', true]);
+          const txs = (pending && pending.transactions) || [];
+          for (const t of txs){
+            if (t && t.hash && !seen.has(t.hash)) addTx(t);
+          }
+        }catch(_){/* ignore */}
+      }, 2000);
+    }
+
+    async function connect(){
+      if (!window.ethereum){ alert('Install MetaMask to connect.'); return; }
+      try{
+        setBusy(btnConnect, true);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        await ensureLocalChain(); // auto-switch/add target network on connect
+        const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        signer = web3.getSigner();
+        account = await signer.getAddress().catch(()=>null);
+        updateAccountLabel();
+        await ensureProvider();
+      }catch(e){ console.warn(e); }
+      finally{ setBusy(btnConnect, false); }
+    }
+
+    async function switchToLocal(){
+      if (!window.ethereum){ alert('MetaMask required'); return; }
+      try{
+        setBusy(btnSwitch, true);
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CFG.chainHex }] });
+      }catch(e){
+        if (e && e.code === 4902){
+          await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+            chainId: CFG.chainHex,
+            chainName: CFG.chainName,
+            nativeCurrency: { name:'ETH', symbol:'ETH', decimals:18 }, rpcUrls:[CFG.rpcUrl], blockExplorerUrls: []
+          }]});
+        } else { console.warn(e); }
+      } finally {
+        setBusy(btnSwitch, false);
+      }
+      await ensureProvider();
+    }
+
+    async function sendTestTx(){
+      if (!window.ethereum){ alert('Send requires MetaMask.'); return; }
+      try{
+        setBusy(btnSend, true);
+        if (!account){ await connect(); }
+        const web3 = new ethers.providers.Web3Provider(window.ethereum, 'any');
+        const s = web3.getSigner();
+        const addr = await s.getAddress();
+        const tx = await s.sendTransaction({ to: addr, value: ethers.constants.Zero });
+        setDetails({ info: 'Submitted test tx', hash: tx.hash });
+        addTx(tx);
+        const start = Date.now();
+        const receipt = await tx.wait(1);
+        const ms = Date.now() - start;
+        setDetails({ ...receipt, confirmedMs: ms });
+      }catch(e){ setDetails('Tx error: '+ (e?.message||e)); console.warn(e); }
+      finally{ setBusy(btnSend, false); }
+    }
+
+    async function doSearch(){
+      const q = (searchInput.value||'').trim(); if (!q) return;
+      // Ensure provider is ready before searching
+      if (!provider) {
+        try { await ensureProvider(); } catch(_) {}
+      }
+      if (!provider) { setDetails('Provider not ready. Connect wallet or start your local node, then try again.'); return; }
+      setDetails('Searching…');
+      try{
+        // tx or block hash
+        if (/^0x([A-Fa-f0-9]{64})$/.test(q)){
+          const tx = await provider.getTransaction(q);
+          if (tx){ setDetails(tx); return; }
+          const blk = await provider.getBlockWithTransactions(q);
+          if (blk){ setDetails(blk); return; }
+        }
+        // block number
+        if (/^\d+$/.test(q)){
+          const num = parseInt(q,10);
+          const blk = await provider.getBlockWithTransactions(num);
+          if (blk){ setDetails(blk); return; }
+        }
+        // address (scan last N blocks)
+        if (/^0x[a-fA-F0-9]{40}$/.test(q)){
+          const latest = await provider.getBlockNumber();
+          const from = Math.max(latest-250, 0);
+          const hits = [];
+          for (let i=latest; i>from; i--){
+            const b = await provider.getBlockWithTransactions(i);
+            if (!b || !Array.isArray(b.transactions)) continue;
+            for (const t of b.transactions){ if (t.from?.toLowerCase()===q.toLowerCase() || t.to?.toLowerCase()===q.toLowerCase()) hits.push(t); }
+            if (hits.length >= 50) break;
+          }
+          setDetails({ address:q, recent: hits });
+          return;
+        }
+        setDetails('No results');
+      }catch(e){ setDetails('Search error: '+ (e?.message||e)); }
+    }
+
+    btnConnect.addEventListener('click', connect);
+    btnSwitch.addEventListener('click', switchToLocal);
+    btnSend.addEventListener('click', sendTestTx);
+    btnPause.addEventListener('click', ()=>{ liveOn=!liveOn; btnPause.textContent = liveOn? 'Pause Live':'Resume Live'; });
+    btnClear.addEventListener('click', ()=>{ 
+      blocksEl.innerHTML=''; 
+      txsEl.innerHTML=''; 
+      txCountEl.textContent='0'; 
+      seen.clear(); // also reset dedupe so feed repopulates
+      setDetails('Cleared'); 
+    });
+    btnSearch.addEventListener('click', doSearch);
+    searchInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter') doSearch(); });
+
+    // Update Switch button label based on CFG
+    document.addEventListener('DOMContentLoaded', ()=>{
+      if (btnSwitch) btnSwitch.textContent = `Switch to ${CFG.chainName} (${CFG.chainId})`;
+    });
+
+    // Replace existing DOMContentLoaded handler to also set provider using CFG
+    window.addEventListener('DOMContentLoaded', ensureProvider);
+  })();
+  </script>
+</body>
+</html>

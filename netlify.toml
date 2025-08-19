@@ -1,0 +1,42 @@
+[build]
+base = "frontend"
+command = "npm run build"
+publish = ".next"
+
+[build.environment]
+NODE_VERSION = "18"
+NEXT_TELEMETRY_DISABLED = "1"
+# NEXT_PUBLIC_API_BASE can be configured in Netlify UI
+
+[[plugins]]
+package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+from = "/"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/explorer"
+to = "/explorer.html"
+status = 200
+
+[[redirects]]
+from = "/explorer/"
+to = "/explorer.html"
+status = 200
+
+[[redirects]]
+from = "/nft"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/defi"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/analytics"
+to = "/index.html"
+status = 200

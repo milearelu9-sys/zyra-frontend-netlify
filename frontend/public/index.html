@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZYRA • NFT Marketplace & DeFi Analytics</title>
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    :root{--bg:#0a0a0a;--bg2:#121826;--pri:#00ff88;--sec:#0066ff;--text:#e8f2ee;--muted:#9be7c4;--card:rgba(255,255,255,0.03);--border:rgba(0,255,136,0.35)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial;background:radial-gradient(1200px 600px at 10% -10%,rgba(0,255,136,.12),transparent),radial-gradient(900px 500px at 100% 0%,rgba(0,102,255,.10),transparent),linear-gradient(135deg,var(--bg) 0%,var(--bg2) 100%);color:var(--text)}
+    .container{max-width:1280px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);z-index:5}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.3px}
+    .badge{background:linear-gradient(45deg,var(--pri),var(--sec));color:#000;border-radius:999px;padding:2px 10px;font-weight:800;font-size:12px}
+    .btn{background:linear-gradient(45deg,var(--pri),var(--sec));color:#000;border:0;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
+    .btn.secondary{background:rgba(0,255,136,.08);color:var(--muted);border:1px solid var(--border)}
+    .grid{display:grid;gap:16px}
+    .two{grid-template-columns:1fr 1fr}
+    @media (max-width: 1100px){.two{grid-template-columns:1fr}}
+    .panel{background:rgba(0,0,0,.5);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .panel h3{margin:0;padding:14px;border-bottom:1px solid var(--border);color:var(--pri)}
+    .panel .body{padding:14px}
+    .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+    .metric{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+    .metric .k{font-size:12px;color:#b7cec4}
+    .metric .v{font-size:22px;font-weight:900;color:#00ff88}
+    .nfts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .thumb{height:180px;background:linear-gradient(45deg,rgba(0,255,136,.25),rgba(0,102,255,.25))}
+    .card .info{padding:10px;display:flex;justify-content:space-between;align-items:center}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .muted{color:#b7cec4}
+    .details{background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">🌀 ZYRA <span class="badge" id="net">CONNECTING…</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="muted mono" id="acct">Not connected</span>
+        <button class="btn" id="btn-connect">Connect Wallet</button>
+        <a class="btn secondary" href="/explorer">Open Explorer</a>
+      </div>
+    </header>
+
+    <section class="grid two" style="margin-top:16px">
+      <div class="panel">
+        <h3>🛒 NFT Marketplace</h3>
+        <div class="body">
+          <div class="nfts" id="nfts">
+            <!-- Placeholder items -->
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>📈 DeFi Analytics</h3>
+        <div class="body">
+          <div class="metrics">
+            <div class="metric"><div class="k">TVL</div><div class="v" id="tvl">—</div></div>
+            <div class="metric"><div class="k">Volume (24h)</div><div class="v" id="vol">—</div></div>
+            <div class="metric"><div class="k">Active Users</div><div class="v" id="users">—</div></div>
+            <div class="metric"><div class="k">AVG APY</div><div class="v" id="apy">—</div></div>
+          </div>
+          <div class="details mono" style="margin-top:12px" id="details"><span class="muted">Connect wallet to load live data…</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <h3>🧠 About</h3>
+      <div class="body">
+        <p class="muted">This is a lightweight landing page for the ZYRA NFT marketplace and DeFi analytics. It supports configurable networks like the Explorer (via URL params or localStorage).</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+  (function(){
+    const net = document.getElementById('net');
+    const acct = document.getElementById('acct');
+    const btn = document.getElementById('btn-connect');
+    const details = document.getElementById('details');
+    const nftsEl = document.getElementById('nfts');
+
+    // Config pattern reused from explorer via URL/localStorage
+    const DEFAULTS = { chainId: 31337, chainHex: '0x7A69', chainName: 'Hardhat Local', rpc: 'http://127.0.0.1:8545' };
+    const p = new URLSearchParams(location.search);
+    function fromLS(k, d){ return localStorage.getItem(k) || d }
+    const CFG = {
+      chainId: parseInt(p.get('chainId') || fromLS('explorer.chainId', DEFAULTS.chainId), 10),
+      chainHex: p.get('chainHex') || fromLS('explorer.chainHex', '0x7A69'),
+      chainName: p.get('chainName') || fromLS('explorer.chainName', DEFAULTS.chainName),
+      rpc: p.get('rpc') || fromLS('explorer.rpc', DEFAULTS.rpc)
+    };
+
+    let provider = null, signer = null, account = null;
+
+    async function ensureProvider(){
+      try{
+        provider = new ethers.providers.JsonRpcProvider(CFG.rpc);
+        const netw = await provider.getNetwork();
+        net.textContent = `Chain ${netw.chainId} • ${CFG.chainName || netw.name}`;
+        seedNfts();
+      }catch(e){ net.textContent='DISCONNECTED'; }
+    }
+
+    async function ensureWallet(){
+      if (!window.ethereum){ alert('Install MetaMask'); return; }
+      const web3 = new ethers.providers.Web3Provider(window.ethereum,'any');
+      await window.ethereum.request({ method:'eth_requestAccounts' });
+      try{ await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CFG.chainHex }] }); }
+      catch(e){ if (e && e.code===4902){ await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{ chainId: CFG.chainHex, chainName: CFG.chainName, nativeCurrency:{name:'ETH',symbol:'ETH',decimals:18}, rpcUrls:[CFG.rpc], blockExplorerUrls: [] }] }); } }
+      signer = web3.getSigner();
+      account = await signer.getAddress();
+      acct.textContent = account.slice(0,6)+'…'+account.slice(-4);
+      details.innerHTML = '<pre>'+JSON.stringify({ account, network: CFG.chainName, rpc: CFG.rpc }, null, 2)+'</pre>';
+      // Demo: load some fake DeFi metrics and balances
+      loadMetrics();
+    }
+
+    function seedNfts(){
+      nftsEl.innerHTML = '';
+      for(let i=1;i<=8;i++){
+        const el = document.createElement('div'); el.className='card';
+        el.innerHTML = `
+          <div class="thumb"></div>
+          <div class="info">
+            <div>
+              <div class="mono">ZYRA NFT #${i.toString().padStart(3,'0')}</div>
+              <div class="muted">Floor: 0.${i} ETH</div>
+            </div>
+            <button class="btn secondary" onclick="alert('Coming soon')">Buy</button>
+          </div>`;
+        nftsEl.appendChild(el);
+      }
+    }
+
+    async function loadMetrics(){
+      // Placeholder metrics; wire to your backend/API later.
+      const tvl = (Math.random()*25+75).toFixed(2)+'M';
+      const vol = (Math.random()*2+1).toFixed(2)+'M';
+      const users = Math.floor(Math.random()*900+100);
+      const apy = (Math.random()*12+4).toFixed(2)+'%';
+      document.getElementById('tvl').textContent = tvl;
+      document.getElementById('vol').textContent = vol;
+      document.getElementById('users').textContent = String(users);
+      document.getElementById('apy').textContent = apy;
+    }
+
+    btn.addEventListener('click', ensureWallet);
+    window.addEventListener('DOMContentLoaded', ensureProvider);
+  })();
+  </script>
+</body>
+</html>

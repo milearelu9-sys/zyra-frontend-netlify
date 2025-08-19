@@ -1,0 +1,32 @@
+# Node
+node_modules/
+**/node_modules/
+.npmrc
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Next.js
+.next/
+**/.next/
+.next/cache/
+
+# Logs
+logs
+*.log
+
+# Env
+.env
+.env.*
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tooling
+.vercel
+.netlify
+coverage/
+dist/
+build/
