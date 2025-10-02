@@ -327,6 +327,8 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <!-- Spotify Web Playback SDK -->
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
 </head>
 <body>
   <div class="animated-bg" aria-hidden="true"></div>
@@ -593,6 +595,7 @@
           <button class="player-btn" id="prevTrack">⏮</button>
           <button class="player-btn" id="playPause">▶️</button>
           <button class="player-btn" id="nextTrack">⏭</button>
+          <button class="player-btn" id="playlistBtn" title="Play Current Playlist">🎵</button>
           <button class="player-btn" id="volumeBtn">🔊</button>
         </div>
         <div class="music-visualizer" id="visualizer">
@@ -884,7 +887,7 @@
       });
     })();
 
-    // Music Player Functionality
+    // Music Player Functionality with Spotify Integration
     (function musicPlayerInit() {
       let isPlaying = false;
       let currentTrack = 0;
@@ -892,34 +895,342 @@
       let isPlayerCollapsed = false;
       let progress = 0;
       let volume = 1;
+      let spotifyPlayer = null;
+      let spotifyToken = null;
+      let deviceId = null;
+      
+      // Spotify Configuration
+      const SPOTIFY_CONFIG = {
+        clientId: '1BgcmKa9rfgm9Lesym3qVx', // From your Spotify link
+        redirectUri: window.location.origin,
+        scopes: [
+          'streaming',
+          'user-read-email',
+          'user-read-private',
+          'user-read-playback-state',
+          'user-modify-playback-state',
+          'playlist-read-private',
+          'playlist-read-collaborative',
+          'user-library-read',
+          'user-top-read'
+        ]
+      };
       
       const tracks = [
         {
-          name: "Quantum Mining Vibes",
-          artist: "ZYRA Official Soundtrack",
-          duration: "3:42"
-        },
-        {
-          name: "Blockchain Beats",
-          artist: "Crypto Collective",
-          duration: "4:15"
-        },
-        {
-          name: "Mining in the Metaverse",
-          artist: "Digital Dreams",
-          duration: "3:28"
-        },
-        {
-          name: "Token Rush",
-          artist: "ZYRA Music Labs",
-          duration: "5:01"
-        },
-        {
-          name: "Quantum Frequencies",
-          artist: "Cyber Synthwave",
-          duration: "4:33"
+          name: "Loading your playlists...",
+          artist: "Connecting to Spotify",
+          duration: "0:00",
+          spotifyUri: null,
+          isPersonal: false
         }
       ];
+
+      let userPlaylists = [];
+      let currentPlaylistTracks = [];
+
+      // Initialize Spotify Web Playback SDK
+      function initializeSpotify() {
+        if (!window.Spotify) {
+          console.log('Spotify SDK not loaded yet, retrying...');
+          setTimeout(initializeSpotify, 1000);
+          return;
+        }
+
+        // Check if user has Spotify token
+        const token = getSpotifyToken();
+        if (!token) {
+          showSpotifyLogin();
+          return;
+        }
+
+        spotifyToken = token;
+        createSpotifyPlayer();
+      }
+
+      function getSpotifyToken() {
+        // Check localStorage for token
+        const stored = localStorage.getItem('spotify_token');
+        if (stored) {
+          const tokenData = JSON.parse(stored);
+          if (tokenData.expires > Date.now()) {
+            return tokenData.token;
+          }
+        }
+        
+        // Check URL for token (after redirect)
+        const hash = window.location.hash;
+        if (hash) {
+          const params = new URLSearchParams(hash.substring(1));
+          const token = params.get('access_token');
+          const expiresIn = params.get('expires_in');
+          
+          if (token) {
+            // Store token
+            localStorage.setItem('spotify_token', JSON.stringify({
+              token: token,
+              expires: Date.now() + (expiresIn * 1000)
+            }));
+            
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return token;
+          }
+        }
+        
+        return null;
+      }
+
+      function showSpotifyLogin() {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.innerHTML = `
+          <div class="dialog">
+            <h3>🎵 Connect Spotify for Your Personal Music</h3>
+            <p style="color: var(--text-dim); margin: 0.5rem 0;">
+              Connect your Spotify account to play your own playlists, liked songs, and top tracks while mining ZYRA!
+            </p>
+            <div style="text-align: center; margin: 1rem 0;">
+              <button class="cta" onclick="loginToSpotify()" style="width: 100%;">
+                🎵 Connect My Spotify Account
+              </button>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-dim); text-align: center;">
+              • Access your personal playlists and liked songs<br>
+              • Play your top tracks and favorite music<br>
+              • Requires Spotify Premium for full playback<br>
+              • Your music stays private and secure
+            </div>
+            <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+              <button class="nav-btn" onclick="this.closest('.modal').remove()">Skip</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      window.loginToSpotify = function() {
+        const scope = SPOTIFY_CONFIG.scopes.join(' ');
+        const authUrl = `https://accounts.spotify.com/authorize?` +
+          `client_id=${SPOTIFY_CONFIG.clientId}&` +
+          `response_type=token&` +
+          `redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}&` +
+          `scope=${encodeURIComponent(scope)}`;
+        
+        window.location.href = authUrl;
+      };
+
+      function createSpotifyPlayer() {
+        spotifyPlayer = new Spotify.Player({
+          name: 'ZYRA Mining Player',
+          getOAuthToken: cb => { cb(spotifyToken); },
+          volume: volume
+        });
+
+        // Error handling
+        spotifyPlayer.addListener('initialization_error', ({ message }) => {
+          console.error('Spotify initialization error:', message);
+          toast('error', 'Spotify connection failed. Using local player.');
+        });
+
+        spotifyPlayer.addListener('authentication_error', ({ message }) => {
+          console.error('Spotify auth error:', message);
+          localStorage.removeItem('spotify_token');
+          toast('error', 'Spotify authentication expired. Please reconnect.');
+        });
+
+        spotifyPlayer.addListener('account_error', ({ message }) => {
+          console.error('Spotify account error:', message);
+          toast('error', 'Spotify Premium required for full playback.');
+        });
+
+        // Ready
+        spotifyPlayer.addListener('ready', ({ device_id }) => {
+          console.log('Spotify player ready with Device ID', device_id);
+          deviceId = device_id;
+          toast('success', '🎵 Spotify connected! Loading your playlists...');
+          loadUserPlaylists();
+        });
+
+        // Not Ready
+        spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+          console.log('Device ID has gone offline', device_id);
+        });
+
+        // Player state changes
+        spotifyPlayer.addListener('player_state_changed', (state) => {
+          if (!state) return;
+
+          const track = state.track_window.current_track;
+          if (track) {
+            document.getElementById('trackName').textContent = track.name;
+            document.getElementById('trackArtist').textContent = track.artists[0].name;
+          }
+
+          const progressPercent = (state.position / state.duration) * 100;
+          document.getElementById('progressFill').style.width = progressPercent + '%';
+
+          isPlaying = !state.paused;
+          updatePlayButton();
+        });
+
+        // Connect to the player
+        spotifyPlayer.connect();
+      }
+
+      // Load user's personal playlists
+      async function loadUserPlaylists() {
+        if (!spotifyToken) return;
+
+        try {
+          // Get user's playlists
+          const playlistsResponse = await fetch('https://api.spotify.com/v1/me/playlists?limit=20', {
+            headers: {
+              'Authorization': `Bearer ${spotifyToken}`
+            }
+          });
+
+          if (!playlistsResponse.ok) {
+            throw new Error('Failed to fetch playlists');
+          }
+
+          const playlistsData = await playlistsResponse.json();
+          userPlaylists = playlistsData.items;
+
+          // Get user's top tracks as well
+          const topTracksResponse = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=medium_term', {
+            headers: {
+              'Authorization': `Bearer ${spotifyToken}`
+            }
+          });
+
+          let topTracks = [];
+          if (topTracksResponse.ok) {
+            const topTracksData = await topTracksResponse.json();
+            topTracks = topTracksData.items;
+          }
+
+          // Get tracks from your favorite artist
+          const artistResponse = await fetch('https://api.spotify.com/v1/artists/1BgcmKa9rfgm9Lesym3qVx/top-tracks?market=US', {
+            headers: {
+              'Authorization': `Bearer ${spotifyToken}`
+            }
+          });
+
+          let artistTracks = [];
+          if (artistResponse.ok) {
+            const artistData = await artistResponse.json();
+            artistTracks = artistData.tracks;
+          }
+
+          // Update tracks array with user's music
+          tracks.length = 0; // Clear existing
+
+          // Add your favorite artist's tracks first
+          if (artistTracks.length > 0) {
+            tracks.push({
+              name: "🎵 Your Favorite Artist",
+              artist: "Top Tracks from your link",
+              duration: `${artistTracks.length} tracks`,
+              spotifyUri: "spotify:artist:1BgcmKa9rfgm9Lesym3qVx",
+              isPersonal: true,
+              tracks: artistTracks.map(track => ({
+                uri: track.uri,
+                name: track.name,
+                artist: track.artists[0].name,
+                duration: formatDuration(track.duration_ms)
+              }))
+            });
+          }
+
+          // Add top tracks second
+          if (topTracks.length > 0) {
+            tracks.push({
+              name: "🔥 Your Top Tracks",
+              artist: "Personal Favorites",
+              duration: `${topTracks.length} tracks`,
+              spotifyUri: null,
+              isPersonal: true,
+              tracks: topTracks.map(track => ({
+                uri: track.uri,
+                name: track.name,
+                artist: track.artists[0].name,
+                duration: formatDuration(track.duration_ms)
+              }))
+            });
+          }
+
+          // Add user's playlists
+          userPlaylists.forEach(playlist => {
+            if (playlist.tracks.total > 0) {
+              tracks.push({
+                name: playlist.name,
+                artist: `${playlist.tracks.total} tracks • ${playlist.owner.display_name}`,
+                duration: `${playlist.tracks.total} tracks`,
+                spotifyUri: playlist.uri,
+                isPersonal: true,
+                playlistId: playlist.id
+              });
+            }
+          });
+
+          // Add some fallback tracks if user has no playlists
+          if (tracks.length === 0) {
+            tracks.push(
+              {
+                name: "Liked Songs",
+                artist: "Your Music Library",
+                duration: "∞",
+                spotifyUri: null,
+                isPersonal: true,
+                isLikedSongs: true
+              },
+              {
+                name: "Discover Weekly",
+                artist: "Spotify's picks for you",
+                duration: "30 tracks",
+                spotifyUri: "spotify:playlist:37i9dQZF1E35Uq4wg2TEAm",
+                isPersonal: false
+              }
+            );
+          }
+
+          currentTrack = 0;
+          updateTrackInfo();
+          toast('success', `🎵 Loaded ${tracks.length} of your playlists!`);
+
+        } catch (error) {
+          console.error('Error loading playlists:', error);
+          toast('error', 'Failed to load your playlists. Using default music.');
+          
+          // Fallback to default tracks
+          tracks.length = 0;
+          tracks.push(
+            {
+              name: "Quantum Mining Vibes",
+              artist: "ZYRA Official Soundtrack",
+              duration: "3:42",
+              spotifyUri: "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd",
+              isPersonal: false
+            },
+            {
+              name: "Your Music (Login Required)",
+              artist: "Connect Spotify to access your playlists",
+              duration: "0:00",
+              spotifyUri: null,
+              isPersonal: false
+            }
+          );
+          updateTrackInfo();
+        }
+      }
+
+      function formatDuration(ms) {
+        const minutes = Math.floor(ms / 60000);
+        const seconds = ((ms % 60000) / 1000).toFixed(0);
+        return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+      }
 
       function updateTrackInfo() {
         const track = tracks[currentTrack];
@@ -928,7 +1239,7 @@
       }
 
       function updateProgress() {
-        if (isPlaying) {
+        if (isPlaying && !spotifyPlayer) {
           progress += 0.5;
           if (progress >= 100) {
             progress = 0;
@@ -938,49 +1249,160 @@
         }
       }
 
-      function togglePlay() {
-        isPlaying = !isPlaying;
+      function updatePlayButton() {
         const playBtn = document.getElementById('playPause');
         const visualizer = document.getElementById('visualizer');
         
         if (isPlaying) {
           playBtn.textContent = '⏸️';
           visualizer.style.display = 'flex';
-          toast('success', '🎵 Now playing: ' + tracks[currentTrack].name);
         } else {
           playBtn.textContent = '▶️';
           visualizer.style.display = 'none';
         }
       }
 
+      function togglePlay() {
+        if (spotifyPlayer) {
+          spotifyPlayer.togglePlay().then(() => {
+            console.log('Toggled playback!');
+          }).catch(err => {
+            console.error('Error toggling playback:', err);
+            toast('error', 'Playback control failed. Check Spotify connection.');
+          });
+        } else {
+          // Fallback to local simulation
+          isPlaying = !isPlaying;
+          updatePlayButton();
+          if (isPlaying) {
+            toast('success', '🎵 Simulated: ' + tracks[currentTrack].name);
+          }
+        }
+      }
+
       function nextTrack() {
-        currentTrack = (currentTrack + 1) % tracks.length;
-        progress = 0;
-        updateTrackInfo();
-        if (isPlaying) {
-          toast('info', '🎵 Next track: ' + tracks[currentTrack].name);
+        if (spotifyPlayer) {
+          spotifyPlayer.nextTrack().then(() => {
+            console.log('Skipped to next track!');
+          }).catch(err => {
+            console.error('Error skipping track:', err);
+            // Fallback to playlist change
+            playSpotifyPlaylist((currentTrack + 1) % tracks.length);
+          });
+        } else {
+          currentTrack = (currentTrack + 1) % tracks.length;
+          progress = 0;
+          updateTrackInfo();
+          if (isPlaying) {
+            toast('info', '🎵 Next: ' + tracks[currentTrack].name);
+          }
         }
       }
 
       function prevTrack() {
-        currentTrack = currentTrack === 0 ? tracks.length - 1 : currentTrack - 1;
-        progress = 0;
-        updateTrackInfo();
-        if (isPlaying) {
-          toast('info', '🎵 Previous track: ' + tracks[currentTrack].name);
+        if (spotifyPlayer) {
+          spotifyPlayer.previousTrack().then(() => {
+            console.log('Skipped to previous track!');
+          }).catch(err => {
+            console.error('Error going to previous track:', err);
+            const prevIndex = currentTrack === 0 ? tracks.length - 1 : currentTrack - 1;
+            playSpotifyPlaylist(prevIndex);
+          });
+        } else {
+          currentTrack = currentTrack === 0 ? tracks.length - 1 : currentTrack - 1;
+          progress = 0;
+          updateTrackInfo();
+          if (isPlaying) {
+            toast('info', '🎵 Previous: ' + tracks[currentTrack].name);
+          }
+        }
+      }
+
+      function playSpotifyPlaylist(trackIndex) {
+        if (!spotifyToken || !deviceId) return;
+
+        currentTrack = trackIndex;
+        const track = tracks[trackIndex];
+        
+        if (track.isLikedSongs) {
+          // Play liked songs
+          fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${spotifyToken}`
+            },
+            body: JSON.stringify({
+              context_uri: "spotify:user:spotify:collection"
+            })
+          }).then(response => {
+            if (response.ok) {
+              toast('success', `🎵 Playing your Liked Songs!`);
+            }
+          }).catch(err => console.error('Error playing liked songs:', err));
+          
+        } else if (track.tracks) {
+          // Play specific tracks (top tracks or artist tracks)
+          const trackUris = track.tracks.map(t => t.uri);
+          fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${spotifyToken}`
+            },
+            body: JSON.stringify({
+              uris: trackUris
+            })
+          }).then(response => {
+            if (response.ok) {
+              toast('success', `🎵 Playing: ${track.name}`);
+            }
+          }).catch(err => console.error('Error playing tracks:', err));
+          
+        } else if (track.spotifyUri) {
+          // Play playlist
+          fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${spotifyToken}`
+            },
+            body: JSON.stringify({
+              context_uri: track.spotifyUri,
+              offset: { position: 0 }
+            })
+          }).then(response => {
+            if (response.ok) {
+              toast('success', `🎵 Playing: ${track.name}`);
+            } else {
+              console.error('Failed to play playlist:', response.status);
+            }
+          }).catch(err => {
+            console.error('Error playing playlist:', err);
+          });
+        } else {
+          toast('info', `🎵 Selected: ${track.name}`);
         }
       }
 
       function toggleVolume() {
         const volumeBtn = document.getElementById('volumeBtn');
-        if (volume === 1) {
-          volume = 0;
-          volumeBtn.textContent = '🔇';
-          toast('info', '🔇 Music muted');
+        if (spotifyPlayer) {
+          volume = volume === 1 ? 0 : 1;
+          spotifyPlayer.setVolume(volume).then(() => {
+            volumeBtn.textContent = volume === 0 ? '🔇' : '🔊';
+            toast('info', volume === 0 ? '🔇 Spotify muted' : '🔊 Spotify unmuted');
+          });
         } else {
-          volume = 1;
-          volumeBtn.textContent = '🔊';
-          toast('info', '🔊 Music unmuted');
+          if (volume === 1) {
+            volume = 0;
+            volumeBtn.textContent = '🔇';
+            toast('info', '🔇 Music muted');
+          } else {
+            volume = 1;
+            volumeBtn.textContent = '🔊';
+            toast('info', '🔊 Music unmuted');
+          }
         }
       }
 
@@ -989,13 +1411,23 @@
         if (!isPlayerVisible) {
           player.classList.add('active');
           isPlayerVisible = true;
-          toast('success', '🎵 Music player opened! Perfect for mining sessions.');
+          
+          // Initialize Spotify if not done yet
+          if (!spotifyPlayer && !spotifyToken) {
+            initializeSpotify();
+          } else if (spotifyToken && userPlaylists.length === 0) {
+            loadUserPlaylists();
+          }
+          
+          toast('success', '🎵 Music player opened! Your personal Spotify music ready.');
         } else {
           player.classList.remove('active');
           isPlayerVisible = false;
+          if (spotifyPlayer) {
+            spotifyPlayer.pause();
+          }
           isPlaying = false;
-          document.getElementById('playPause').textContent = '▶️';
-          document.getElementById('visualizer').style.display = 'none';
+          updatePlayButton();
         }
       };
 
@@ -1021,15 +1453,18 @@
         const player = document.getElementById('musicPlayer');
         player.classList.remove('active');
         isPlayerVisible = false;
+        if (spotifyPlayer) {
+          spotifyPlayer.pause();
+        }
         isPlaying = false;
-        document.getElementById('playPause').textContent = '▶️';
-        document.getElementById('visualizer').style.display = 'none';
+        updatePlayButton();
       }
 
       // Event listeners
       document.getElementById('playPause').addEventListener('click', togglePlay);
       document.getElementById('nextTrack').addEventListener('click', nextTrack);
       document.getElementById('prevTrack').addEventListener('click', prevTrack);
+      document.getElementById('playlistBtn').addEventListener('click', () => playSpotifyPlaylist(currentTrack));
       document.getElementById('volumeBtn').addEventListener('click', toggleVolume);
       document.getElementById('togglePlayer').addEventListener('click', togglePlayerSize);
       document.getElementById('closePlayer').addEventListener('click', closePlayer);
@@ -1039,8 +1474,19 @@
         const rect = e.target.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const newProgress = (clickX / rect.width) * 100;
-        progress = newProgress;
-        document.getElementById('progressFill').style.width = progress + '%';
+        
+        if (spotifyPlayer) {
+          // Seek in Spotify (needs current track duration)
+          spotifyPlayer.getCurrentState().then(state => {
+            if (state) {
+              const seekPosition = (newProgress / 100) * state.duration;
+              spotifyPlayer.seek(seekPosition);
+            }
+          });
+        } else {
+          progress = newProgress;
+          document.getElementById('progressFill').style.width = progress + '%';
+        }
       });
 
       // Initialize
@@ -1053,6 +1499,14 @@
           toggleMusicPlayer();
         }
       }, 3000);
+
+      // Initialize Spotify when SDK is ready
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        console.log('Spotify Web Playback SDK is ready');
+        if (isPlayerVisible) {
+          initializeSpotify();
+        }
+      };
     })();
   </script>
 </body>
