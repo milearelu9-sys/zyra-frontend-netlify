@@ -6,7 +6,18 @@
   <title>ZYRA | Ultra‑Advanced Quantum Blockchain Dashboard</title>
   <meta name="description" content="ZYRA ultra‑advanced quantum blockchain dashboard with live analytics, DeFi metrics, and adaptive quantum UI." />
   <meta name="theme-color" content="#0ea5ff" />
-  <!-- Add Google AdSense meta tag -->
+  <!-- Add Google Ad  <div class="dock" aria-label="Quick Controls">
+    <button class="fab" title="Mining Stats" id="btnStats">📊</  <div class="dock" aria-label="Quick Controls">
+    <button class="fab" title="Music Player" id="btnMusic">🎵</button>
+    <button class="fab" title="Mining Stats" id="btnStats">📊</button>
+    <button class="fab" title="Rewards" id="btnRewards">💰</button>
+    <button class="fab" title="Mining Pool" id="btnPool">🏊</button>
+    <button class="fab" title="Settings" id="btnSettings">⚙️</button>
+  </div>
+    <button class="fab" title="Rewards" id="btnRewards">💰</button>
+    <button class="fab" title="Mining Pool" id="btnPool">🏊</button>
+    <button class="fab" title="Settings" id="btnSettings">⚙️</button>
+  </div>eta tag -->
   <meta name="google-adsense-account" content="ca-pub-3998610367313946">
   <!-- Add Google AdSense script -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3998610367313946" crossorigin="anonymous"></script>
@@ -180,6 +191,139 @@
       linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
       linear-gradient(var(--grid-line) 1px, transparent 1px);
       background-size: 40px 40px; mix-blend-mode: screen; }
+
+    /* Special styling for grand prize milestone */
+    .grand-prize {
+      animation: goldGlow 3s ease-in-out infinite alternate;
+      position: relative;
+      overflow: hidden;
+    }
+    .grand-prize::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent, rgba(255,215,0,0.1), transparent);
+      animation: shimmer 4s linear infinite;
+    }
+    @keyframes goldGlow {
+      0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+      100% { box-shadow: 0 0 40px rgba(255,215,0,0.6), 0 0 60px rgba(255,140,0,0.3); }
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    /* Music Player Styles */
+    .music-player {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1rem;
+      backdrop-filter: blur(12px);
+      min-width: 280px;
+      z-index: 50;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .music-player.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .music-player.collapsed {
+      min-width: auto;
+      padding: 0.5rem;
+    }
+    .player-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .player-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .player-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .player-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0.3rem;
+      border-radius: 8px;
+      transition: all 0.2s;
+      font-size: 1rem;
+    }
+    .player-btn:hover {
+      background: var(--glass);
+      color: var(--q-primary);
+    }
+    .player-info {
+      margin-bottom: 0.5rem;
+    }
+    .track-name {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .track-artist {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--q-primary), var(--q-secondary));
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+    .music-visualizer {
+      display: flex;
+      align-items: end;
+      gap: 2px;
+      height: 20px;
+      margin-left: 0.5rem;
+    }
+    .visualizer-bar {
+      width: 3px;
+      background: var(--q-primary);
+      border-radius: 1px;
+      animation: visualize 1s ease-in-out infinite alternate;
+    }
+    .visualizer-bar:nth-child(1) { animation-delay: 0s; }
+    .visualizer-bar:nth-child(2) { animation-delay: 0.1s; }
+    .visualizer-bar:nth-child(3) { animation-delay: 0.2s; }
+    .visualizer-bar:nth-child(4) { animation-delay: 0.3s; }
+    @keyframes visualize {
+      0% { height: 2px; }
+      100% { height: 20px; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
@@ -204,15 +348,14 @@
         <button class="nav-btn" data-target="terms">Terms</button>
       </nav>
       <div class="wallet">
-        <div id="walletState" class="pill">Mining Active</div>
-        <button id="walletBtn" class="cta">Start Mining</button>
+        <div id="walletState" class="pill">Active</div>
       </div>
     </div>
   </header>
 
   <main id="overview" class="hero" role="main">
     <h1 class="h-title">ZYRA Quantum Mining Network</h1>
-    <p class="h-sub">Revolutionary quantum-resistant mining ecosystem with sustainable rewards. Join thousands of miners earning ZYRA tokens through our advanced quantum computing algorithms. Eco-friendly mining with exceptional returns and community milestones.</p>
+    <p class="h-sub">Revolutionary quantum-resistant mining ecosystem with virtual rewards. Join thousands of miners earning ZYRA tokens through our advanced quantum computing algorithms. Eco-friendly virtual mining with educational rewards and community milestones. Note: ZYRA tokens are virtual game tokens with no real-world value.</p>
 
     <section class="stats" aria-label="Key Metrics">
       <div class="card"><div id="statMiners" class="metric">--</div><div class="label">Active Miners</div></div>
@@ -287,7 +430,7 @@
   <section class="grid" id="milestones" aria-label="Community Milestones">
     <div style="grid-column: 1 / -1; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
       <p style="margin: 0; font-size: 0.9rem; color: var(--text-dim);">
-        🔒 <strong>Age Compliance Notice:</strong> Milestone rewards and airdrops are subject to age restrictions. Users under 18 will have rewards held in trust until they reach legal age for cryptocurrency transactions.
+        🔒 <strong>Age & Prize Compliance:</strong> Physical prizes (cash, cars, holidays, etc.) are only available to users 18+ years old. Virtual token rewards have no real-world value. All prizes subject to verification and local regulations.
       </p>
     </div>
     <article class="tile">
@@ -305,6 +448,34 @@
     <article class="tile">
       <h3>🚀 25,000 Miners Milestone</h3>
       <p><strong>Reward:</strong> 10,000 ZYRA + Governance voting rights<br><strong>Progress:</strong> 847/25,000 (3.4%)<br><strong>Bonus:</strong> Mainnet launch preparation rewards</p>
+    </article>
+    <article class="tile">
+      <h3>💰 50,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> $500 Cash Prize (Random Winner)<br><strong>Progress:</strong> 847/50,000 (1.7%)<br><strong>Bonus:</strong> Enhanced staking rewards for all</p>
+    </article>
+    <article class="tile">
+      <h3>📱 200,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> iPhone 17 (Random Winner)<br><strong>Progress:</strong> 847/200,000 (0.4%)<br><strong>Bonus:</strong> Premium mining features unlocked</p>
+    </article>
+    <article class="tile">
+      <h3>🏝️ 500,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> $3,000 Holiday Package (Random Winner)<br><strong>Progress:</strong> 847/500,000 (0.2%)<br><strong>Bonus:</strong> VIP mining pool access</p>
+    </article>
+    <article class="tile">
+      <h3>🚗 1,000,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> $30,000 Car (Random Winner)<br><strong>Progress:</strong> 847/1,000,000 (0.08%)<br><strong>Bonus:</strong> Lifetime mining benefits</p>
+    </article>
+    <article class="tile">
+      <h3>🏠 5,000,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> Apartment Prize (Random Winner)<br><strong>Progress:</strong> 847/5,000,000 (0.02%)<br><strong>Bonus:</strong> Master miner status for all</p>
+    </article>
+    <article class="tile">
+      <h3>💎 10,000,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> $100,000 Cash Prize (Random Winner)<br><strong>Progress:</strong> 847/10,000,000 (0.008%)<br><strong>Bonus:</strong> Quantum mining algorithms</p>
+    </article>
+    <article class="tile grand-prize" style="border: 2px solid #ffd700; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,140,0,0.1));">
+      <h3>🏆 15,000,000 Miners - THE BIG PRIZE</h3>
+      <p><strong>🔥 GRAND REWARD:</strong> Lamborghini (Random Winner)<br><strong>Progress:</strong> 847/15,000,000 (0.006%)<br><strong>🎉 Ultimate Bonus:</strong> Legendary miner hall of fame</p>
     </article>
   </section>
 
@@ -339,25 +510,34 @@
         <p>• ZYRA reserves the right to restrict access in certain jurisdictions</p>
         <p>• Participants must provide accurate age verification when required</p>
 
-        <h4 style="color: var(--text); margin-top: 1.5rem;">3. Reward Restrictions for Minors</h4>
-        <p>• Users under 18 cannot withdraw earned ZYRA tokens</p>
-        <p>• Minors cannot participate in token sales, airdrops, or reward extractions</p>
-        <p>• Earned tokens for minors are held in trust until they reach 18 years of age</p>
-        <p>• Account transfer to adult status requires identity verification</p>
+        <h4 style="color: var(--text); margin-top: 1.5rem;">3. Reward Restrictions & Prize Eligibility</h4>
+        <p>• <strong>Virtual Tokens:</strong> ZYRA tokens have no real-world value and are for app use only</p>
+        <p>• <strong>Physical Prizes:</strong> Cash, cars, holidays, and physical rewards are only available to users 18+ years old</p>
+        <p>• <strong>Prize Verification:</strong> Winners must provide valid ID and pass verification process</p>
+        <p>• <strong>Random Selection:</strong> Physical prizes awarded through verified random selection from eligible participants</p>
+        <p>• <strong>Tax Responsibility:</strong> Prize winners are responsible for all applicable taxes and fees</p>
+        <p>• <strong>Geographic Restrictions:</strong> Some prizes may not be available in all jurisdictions</p>
 
-        <h4 style="color: var(--text); margin-top: 1.5rem;">4. Global Compliance</h4>
+        <h4 style="color: var(--text); margin-top: 1.5rem;">4. Token Usage & Value Declaration</h4>
+        <p>• <strong>Application-Only Tokens:</strong> ZYRA tokens are exclusively for use within this application</p>
+        <p>• <strong>No External Value:</strong> Tokens have NO monetary value outside of this platform</p>
+        <p>• <strong>Virtual Currency:</strong> These are virtual game tokens, not cryptocurrency investments</p>
+        <p>• <strong>No Trading:</strong> Tokens cannot be traded, sold, or exchanged for real money</p>
+        <p>• <strong>Entertainment Purpose:</strong> Mining activities are for educational and entertainment purposes only</p>
+
+        <h4 style="color: var(--text); margin-top: 1.5rem;">5. Global Compliance</h4>
         <p>• These terms comply with GDPR, COPPA, and international data protection laws</p>
         <p>• Users from restricted jurisdictions are prohibited from participation</p>
-        <p>• KYC/AML procedures may be required for reward redemption</p>
-        <p>• Tax obligations are the responsibility of the user</p>
+        <p>• Virtual token system does not require KYC/AML procedures</p>
+        <p>• No tax obligations as tokens have no real-world value</p>
 
-        <h4 style="color: var(--text); margin-top: 1.5rem;">5. Platform Responsibilities</h4>
+        <h4 style="color: var(--text); margin-top: 1.5rem;">6. Platform Responsibilities</h4>
         <p>• ZYRA implements age verification systems to prevent underage withdrawals</p>
         <p>• Regular compliance audits ensure adherence to international standards</p>
-        <p>• User education about risks and responsibilities is provided</p>
+        <p>• User education about virtual token nature and lack of real-world value</p>
         <p>• Technical support is available for eligible participants</p>
 
-        <h4 style="color: var(--text); margin-top: 1.5rem;">6. Acceptance and Updates</h4>
+        <h4 style="color: var(--text); margin-top: 1.5rem;">7. Acceptance and Updates</h4>
         <p>• By using ZYRA mining services, users agree to these terms</p>
         <p>• Terms may be updated to reflect regulatory changes</p>
         <p>• Continued use constitutes acceptance of updated terms</p>
@@ -365,7 +545,7 @@
 
         <div style="background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); border-radius: 8px; padding: 1rem; margin-top: 1.5rem;">
           <p style="margin: 0; font-weight: 600; color: var(--q-primary);">
-            ⚠️ Important: Minors can mine ZYRA tokens but cannot extract or withdraw rewards until they reach 18 years of age. All earnings are securely held in trust.
+            ⚠️ Important: ZYRA tokens are virtual with NO real value. Physical prizes (cash, cars, holidays) available only to verified users 18+. Random winner selection for all physical rewards.
           </p>
         </div>
       </div>
@@ -381,15 +561,49 @@
   </div>
 
   <footer>
-    <div>© 2025 ZYRA Mining Network • Quantum-powered sustainable mining</div>
+    <div>© 2025 ZYRA Mining Network • Virtual token gaming platform • Educational purposes only</div>
     <div style="font-size: 0.75rem; color: var(--text-dim);">
-      Minimum age: 13 years | Withdrawal age: 18 years | 
+      No real-world value • Virtual tokens only • Minimum age: 13 years | 
       <button class="nav-btn" data-target="terms" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; margin: 0;">View Terms</button>
     </div>
   </footer>
 
   <!-- Toast container -->
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Music Player -->
+  <div id="musicPlayer" class="music-player">
+    <div class="player-header">
+      <div class="player-title">🎵 ZYRA Mining Beats</div>
+      <div class="player-controls">
+        <button class="player-btn" id="togglePlayer" title="Collapse">−</button>
+        <button class="player-btn" id="closePlayer" title="Close">×</button>
+      </div>
+    </div>
+    <div id="playerContent">
+      <div class="player-info">
+        <div class="track-name" id="trackName">Quantum Mining Vibes</div>
+        <div class="track-artist" id="trackArtist">ZYRA Official Soundtrack</div>
+      </div>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="player-btn" id="prevTrack">⏮</button>
+          <button class="player-btn" id="playPause">▶️</button>
+          <button class="player-btn" id="nextTrack">⏭</button>
+          <button class="player-btn" id="volumeBtn">🔊</button>
+        </div>
+        <div class="music-visualizer" id="visualizer">
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+          <div class="visualizer-bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Config
@@ -433,7 +647,14 @@
         { target: 1000, reward: '500 ZYRA Airdrop' },
         { target: 5000, reward: '2K ZYRA + NFT' },
         { target: 10000, reward: '5K ZYRA + Status' },
-        { target: 25000, reward: '10K ZYRA + Governance' }
+        { target: 25000, reward: '10K ZYRA + Governance' },
+        { target: 50000, reward: '$500 Cash Prize' },
+        { target: 200000, reward: 'iPhone 17' },
+        { target: 500000, reward: '$3K Holiday Package' },
+        { target: 1000000, reward: '$30K Car' },
+        { target: 5000000, reward: 'Apartment Prize' },
+        { target: 10000000, reward: '$100K Cash Prize' },
+        { target: 15000000, reward: '🏆 LAMBORGHINI 🏆' }
       ];
       
       function updateMiningStats() {
@@ -494,9 +715,6 @@
       if (age < 18) {
         toast('info', 'Note: As a minor, your rewards will be held in trust until you turn 18.');
       }
-      
-      const walletState = document.getElementById('walletState');
-      if(walletState) walletState.textContent = 'Mining Active';
     }
 
     // Age verification modal
@@ -562,7 +780,9 @@
       }
       
       if (numericAge < 18) {
-        toast('info', 'Welcome! As a minor, you can mine but cannot withdraw rewards until you turn 18.');
+        toast('info', 'Welcome! You can mine virtual ZYRA tokens for educational purposes. Tokens have no real-world value.');
+      } else {
+        toast('info', 'Welcome! Remember: ZYRA tokens are virtual game tokens with no real-world monetary value.');
       }
       
       startMining();
@@ -615,28 +835,17 @@
     (function miningInterface(){
       const $ = (id)=> document.getElementById(id);
       
-      // Start mining button
-      const walletBtn = $('walletBtn');
-      if(walletBtn) {
-        walletBtn.addEventListener('click', () => {
-          startMining();
-          walletBtn.textContent = 'Mining Active';
-          toast('info', 'ZYRA quantum mining algorithm initialized. Earning rewards...');
-        });
-      }
-      
-      // Floating action buttons for mining
-      const btnStart = $('btnStart');
+      // Floating action buttons
+      const btnMusic = $('btnMusic');
       const btnStats = $('btnStats');
       const btnRewards = $('btnRewards');
       const btnPool = $('btnPool');
       const btnSettings = $('btnSettings');
       
-      if(btnStart) btnStart.addEventListener('click', () => {
-        startMining();
-        toast('success', '⚡ Mining started with quantum efficiency!');
+      if(btnMusic) btnMusic.addEventListener('click', () => {
+        toggleMusicPlayer();
       });
-      
+
       if(btnStats) btnStats.addEventListener('click', () => {
         document.getElementById('analytics')?.scrollIntoView({ behavior: 'smooth' });
       });
@@ -644,7 +853,9 @@
       if(btnRewards) btnRewards.addEventListener('click', () => {
         const userAge = parseInt(localStorage.getItem('zyra:userAge') || '0');
         if (userAge < 18) {
-          toast('info', 'Reward extraction available when you turn 18. Your tokens are safely held in trust.');
+          toast('info', 'Physical prizes (cash, cars, holidays) available when you turn 18. Virtual tokens remain virtual.');
+        } else {
+          toast('success', 'You are eligible for all milestone prizes including physical rewards!');
         }
         document.getElementById('rewards')?.scrollIntoView({ behavior: 'smooth' });
       });
@@ -671,6 +882,177 @@
           }
         });
       });
+    })();
+
+    // Music Player Functionality
+    (function musicPlayerInit() {
+      let isPlaying = false;
+      let currentTrack = 0;
+      let isPlayerVisible = false;
+      let isPlayerCollapsed = false;
+      let progress = 0;
+      let volume = 1;
+      
+      const tracks = [
+        {
+          name: "Quantum Mining Vibes",
+          artist: "ZYRA Official Soundtrack",
+          duration: "3:42"
+        },
+        {
+          name: "Blockchain Beats",
+          artist: "Crypto Collective",
+          duration: "4:15"
+        },
+        {
+          name: "Mining in the Metaverse",
+          artist: "Digital Dreams",
+          duration: "3:28"
+        },
+        {
+          name: "Token Rush",
+          artist: "ZYRA Music Labs",
+          duration: "5:01"
+        },
+        {
+          name: "Quantum Frequencies",
+          artist: "Cyber Synthwave",
+          duration: "4:33"
+        }
+      ];
+
+      function updateTrackInfo() {
+        const track = tracks[currentTrack];
+        document.getElementById('trackName').textContent = track.name;
+        document.getElementById('trackArtist').textContent = track.artist;
+      }
+
+      function updateProgress() {
+        if (isPlaying) {
+          progress += 0.5;
+          if (progress >= 100) {
+            progress = 0;
+            nextTrack();
+          }
+          document.getElementById('progressFill').style.width = progress + '%';
+        }
+      }
+
+      function togglePlay() {
+        isPlaying = !isPlaying;
+        const playBtn = document.getElementById('playPause');
+        const visualizer = document.getElementById('visualizer');
+        
+        if (isPlaying) {
+          playBtn.textContent = '⏸️';
+          visualizer.style.display = 'flex';
+          toast('success', '🎵 Now playing: ' + tracks[currentTrack].name);
+        } else {
+          playBtn.textContent = '▶️';
+          visualizer.style.display = 'none';
+        }
+      }
+
+      function nextTrack() {
+        currentTrack = (currentTrack + 1) % tracks.length;
+        progress = 0;
+        updateTrackInfo();
+        if (isPlaying) {
+          toast('info', '🎵 Next track: ' + tracks[currentTrack].name);
+        }
+      }
+
+      function prevTrack() {
+        currentTrack = currentTrack === 0 ? tracks.length - 1 : currentTrack - 1;
+        progress = 0;
+        updateTrackInfo();
+        if (isPlaying) {
+          toast('info', '🎵 Previous track: ' + tracks[currentTrack].name);
+        }
+      }
+
+      function toggleVolume() {
+        const volumeBtn = document.getElementById('volumeBtn');
+        if (volume === 1) {
+          volume = 0;
+          volumeBtn.textContent = '🔇';
+          toast('info', '🔇 Music muted');
+        } else {
+          volume = 1;
+          volumeBtn.textContent = '🔊';
+          toast('info', '🔊 Music unmuted');
+        }
+      }
+
+      window.toggleMusicPlayer = function() {
+        const player = document.getElementById('musicPlayer');
+        if (!isPlayerVisible) {
+          player.classList.add('active');
+          isPlayerVisible = true;
+          toast('success', '🎵 Music player opened! Perfect for mining sessions.');
+        } else {
+          player.classList.remove('active');
+          isPlayerVisible = false;
+          isPlaying = false;
+          document.getElementById('playPause').textContent = '▶️';
+          document.getElementById('visualizer').style.display = 'none';
+        }
+      };
+
+      function togglePlayerSize() {
+        const player = document.getElementById('musicPlayer');
+        const content = document.getElementById('playerContent');
+        const toggleBtn = document.getElementById('togglePlayer');
+        
+        if (!isPlayerCollapsed) {
+          content.style.display = 'none';
+          player.classList.add('collapsed');
+          toggleBtn.textContent = '+';
+          isPlayerCollapsed = true;
+        } else {
+          content.style.display = 'block';
+          player.classList.remove('collapsed');
+          toggleBtn.textContent = '−';
+          isPlayerCollapsed = false;
+        }
+      }
+
+      function closePlayer() {
+        const player = document.getElementById('musicPlayer');
+        player.classList.remove('active');
+        isPlayerVisible = false;
+        isPlaying = false;
+        document.getElementById('playPause').textContent = '▶️';
+        document.getElementById('visualizer').style.display = 'none';
+      }
+
+      // Event listeners
+      document.getElementById('playPause').addEventListener('click', togglePlay);
+      document.getElementById('nextTrack').addEventListener('click', nextTrack);
+      document.getElementById('prevTrack').addEventListener('click', prevTrack);
+      document.getElementById('volumeBtn').addEventListener('click', toggleVolume);
+      document.getElementById('togglePlayer').addEventListener('click', togglePlayerSize);
+      document.getElementById('closePlayer').addEventListener('click', closePlayer);
+
+      // Progress bar click
+      document.getElementById('progressBar').addEventListener('click', (e) => {
+        const rect = e.target.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const newProgress = (clickX / rect.width) * 100;
+        progress = newProgress;
+        document.getElementById('progressFill').style.width = progress + '%';
+      });
+
+      // Initialize
+      updateTrackInfo();
+      setInterval(updateProgress, 100);
+
+      // Auto-show music player after 3 seconds
+      setTimeout(() => {
+        if (!isPlayerVisible) {
+          toggleMusicPlayer();
+        }
+      }, 3000);
     })();
   </script>
 </body>
