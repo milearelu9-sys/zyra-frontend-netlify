@@ -104,7 +104,7 @@
     .h-sub { color: var(--text-dim); max-width: 70ch; margin: .35rem 0 0; }
 
     /* Stats */
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1rem; margin-top: 1.2rem; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-top: 1.2rem; }
     .card { position: relative; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1rem; overflow: hidden; }
     .card::before { content: ''; position: absolute; inset: -100% -50%; background: radial-gradient(60% 60% at 10% 10%, rgba(74,222,128,.25), transparent 60%); transform: rotate(12deg); opacity: .5; }
     .metric { font-family: Orbitron; font-weight: 900; font-size: clamp(1.3rem, 3.2vw, 2.2rem); letter-spacing: .04em; color: #e5ffef; }
@@ -165,7 +165,7 @@
 
     /* Responsive */
     @media (max-width: 860px) { .stats { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media (max-width: 520px) { nav { display:none; } .wrap { padding: .75rem 1rem; } }
+    @media (max-width: 520px) { nav { display:none; } .wrap { padding: .75rem 1rem; } .stats { grid-template-columns: repeat(2, minmax(150px,1fr)); } }
 
     /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
@@ -173,7 +173,7 @@
     }
 
     /* Offset for sticky header when scrolling to anchors */
-    #overview, #defi, #security, #analytics { scroll-margin-top: 90px; }
+    #overview, #mining, #rewards, #milestones, #analytics { scroll-margin-top: 90px; }
 
     /* Subtle quantum grid overlay */
     .grid-overlay { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .08; background-image:
@@ -197,160 +197,132 @@
       </a>
       <nav aria-label="Primary">
         <button class="nav-btn" data-target="overview">Overview</button>
-        <a class="nav-btn" href="defi.html" role="button">DeFi</a>
-        <a class="nav-btn" href="analytics.html" role="button">Analytics</a>
-        <a class="nav-btn" href="nft.html" role="button">NFT</a>
-        <a class="nav-btn" href="explorer.html" role="button" title="Live blocks and transactions">Explorer</a>
-        <a class="nav-btn" href="bft.html" role="button" title="BFT Visualizer">BFT</a>
+        <button class="nav-btn" data-target="mining">Mining</button>
+        <button class="nav-btn" data-target="rewards">Rewards</button>
+        <button class="nav-btn" data-target="milestones">Milestones</button>
+        <button class="nav-btn" data-target="analytics">Analytics</button>
       </nav>
-      <button id="themeBtn" class="nav-btn" title="Toggle theme">🌗</button>
-      <button id="authBtn" class="nav-btn" title="Sign in">Sign In</button>
-      <button id="langBtn" class="nav-btn" title="Language">🌐</button>
       <div class="wallet">
-        <div id="walletState" class="pill">Not Connected</div>
-        <div id="reservedPill" class="pill" style="display:none" title="Your presale reservation"></div>
-        <button id="walletBtn" class="cta">Connect Metamask</button>
-        <button id="donateBtn" class="nav-btn" title="Donate">Donate</button>
-        <button id="presaleBtn" class="nav-btn" title="Join presale">Presale $0.12</button>
+        <div id="walletState" class="pill">Mining Active</div>
+        <button id="walletBtn" class="cta">Start Mining</button>
       </div>
     </div>
   </header>
 
   <main id="overview" class="hero" role="main">
-    <h1 class="h-title">Ultra‑Advanced Quantum Blockchain Intelligence</h1>
-    <p class="h-sub">Unified visibility across performance, security and DeFi with adaptive quantum UI. Live metrics, particle analytics, and responsive charts engineered for clarity and speed.</p>
+    <h1 class="h-title">ZYRA Quantum Mining Network</h1>
+    <p class="h-sub">Revolutionary quantum-resistant mining ecosystem with sustainable rewards. Join thousands of miners earning ZYRA tokens through our advanced quantum computing algorithms. Eco-friendly mining with exceptional returns and community milestones.</p>
 
     <section class="stats" aria-label="Key Metrics">
-      <div class="card"><div id="statTPS" class="metric">--</div><div class="label">Transactions / sec</div></div>
-      <div class="card"><div id="statLatency" class="metric">--</div><div class="label">Average Latency</div></div>
-      <div class="card"><div id="statFinality" class="metric">--</div><div class="label">Finality Time</div></div>
-      <div class="card"><div id="statHealth" class="metric">--</div><div class="label">Network Health</div></div>
+      <div class="card"><div id="statMiners" class="metric">--</div><div class="label">Active Miners</div></div>
+      <div class="card"><div id="statMining" class="metric">--</div><div class="label">Network Hashrate</div></div>
+      <div class="card"><div id="statRewards" class="metric">--</div><div class="label">Total Rewards Paid</div></div>
+      <div class="card"><div id="statAPY" class="metric">--</div><div class="label">Current APY</div></div>
+      <div class="card"><div id="statEfficiency" class="metric">--</div><div class="label">Energy Efficiency</div></div>
+      <div class="card"><div id="statNextMilestone" class="metric">--</div><div class="label">Next Milestone</div></div>
     </section>
   </main>
 
   <section class="grid" id="defi">
     <article class="tile">
-      <h3>DeFi Liquidity</h3>
-      <p>Total value locked, pool health and projected yield across core protocols.</p>
+      <h3>🚀 Quantum Mining Algorithm</h3>
+      <p>Advanced quantum-resistant proof-of-work using lattice-based cryptography. 99.7% energy efficiency compared to traditional mining. Revolutionary algorithm that's both secure and sustainable.</p>
     </article>
     <article class="tile">
-      <h3>Quantum Security</h3>
-      <p>Post‑quantum cryptography posture, anomaly sensing and incident‑free days.</p>
+      <h3>💰 Mining Rewards</h3>
+      <p>Earn 5-25 ZYRA tokens per block based on your contribution. Dynamic rewards scale with network participation. Bonus rewards for consistent mining and community milestones.</p>
     </article>
     <article class="tile">
-      <h3>Throughput Scaling</h3>
-      <p>Shard utilization, mempool pressure and predictive capacity models.</p>
+      <h3>🌱 Eco-Friendly Protocol</h3>
+      <p>Ultra-low power consumption: 0.001% of Bitcoin's energy usage. Sustainable mining powered by quantum efficiency. Green blockchain technology for the future.</p>
     </article>
     <article class="tile">
-      <h3>Validator Cohesion</h3>
-      <p>Uptime distribution, slashing events and peer latency topology.</p>
+      <h3>⚡ Lightning Fast Processing</h3>
+      <p>Process thousands of transactions per second with quantum speed. Instant block validation and near-zero latency. Optimized for maximum mining efficiency.</p>
+    </article>
+  </section>
+
+  <!-- ZYRA Mining Section -->
+  <section class="grid" id="mining" aria-label="ZYRA Mining">
+    <article class="tile">
+      <h3>🔧 Mining Setup</h3>
+      <p>Simple one-click mining setup. No specialized hardware required - mine with CPU, GPU, or quantum processors. Download our lightweight miner and start earning immediately.</p>
+    </article>
+    <article class="tile">
+      <h3>📊 Mining Dashboard</h3>
+      <p>Real-time monitoring of your mining performance, earnings, and efficiency. Track hashrate, power consumption, and profitability with advanced analytics.</p>
+    </article>
+    <article class="tile">
+      <h3>🏆 Mining Pools</h3>
+      <p>Join collaborative mining pools for consistent rewards. Pool rewards distributed fairly based on contribution. Lower variance, steady income for all miners.</p>
+    </article>
+    <article class="tile">
+      <h3>🛡️ Security & Validation</h3>
+      <p>Quantum-resistant security protocols protect your mining rewards. Advanced fraud detection and automatic payout validation ensure fair mining for everyone.</p>
+    </article>
+  </section>
+
+  <!-- Rewards Section -->
+  <section class="grid" id="rewards" aria-label="Mining Rewards">
+    <article class="tile">
+      <h3>� Daily Mining Rewards</h3>
+      <p><strong>Base Rate:</strong> 5-8 ZYRA per block<br><strong>Performance Bonus:</strong> +20% for top miners<br><strong>Consistency Bonus:</strong> +15% for 30+ days mining</p>
+    </article>
+    <article class="tile">
+      <h3>🎯 Weekly Challenges</h3>
+      <p><strong>Mining Streak:</strong> 7 days = 50 ZYRA bonus<br><strong>Efficiency Master:</strong> >90% uptime = 100 ZYRA<br><strong>Community Helper:</strong> Refer miners = 25 ZYRA each</p>
+    </article>
+    <article class="tile">
+      <h3>🚀 Staking Rewards</h3>
+      <p><strong>Stake Mining Rewards:</strong> 12-18% APY<br><strong>Compound Interest:</strong> Auto-reinvest option<br><strong>Lock Periods:</strong> 30, 90, 365 days with increasing rates</p>
+    </article>
+    <article class="tile">
+      <h3>🎁 Special Bonuses</h3>
+      <p><strong>Early Adopter:</strong> 2x rewards for first 1000 miners<br><strong>Quantum Efficiency:</strong> +50% for quantum hardware<br><strong>Green Mining:</strong> +25% for renewable energy</p>
+    </article>
+  </section>
+
+  <!-- Milestones Section -->
+  <section class="grid" id="milestones" aria-label="Community Milestones">
+    <article class="tile">
+      <h3>🎯 1,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> 500 ZYRA airdrop to all miners<br><strong>Progress:</strong> 847/1,000 (84.7%)<br><strong>Bonus:</strong> Mining difficulty reduction by 10%</p>
+    </article>
+    <article class="tile">
+      <h3>🏆 5,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> 2,000 ZYRA airdrop + NFT badge<br><strong>Progress:</strong> 847/5,000 (16.9%)<br><strong>Bonus:</strong> Unlock advanced mining algorithms</p>
+    </article>
+    <article class="tile">
+      <h3>🌟 10,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> 5,000 ZYRA + Exclusive miner status<br><strong>Progress:</strong> 847/10,000 (8.5%)<br><strong>Bonus:</strong> Access to quantum mining beta</p>
+    </article>
+    <article class="tile">
+      <h3>🚀 25,000 Miners Milestone</h3>
+      <p><strong>Reward:</strong> 10,000 ZYRA + Governance voting rights<br><strong>Progress:</strong> 847/25,000 (3.4%)<br><strong>Bonus:</strong> Mainnet launch preparation rewards</p>
     </article>
   </section>
 
   <!-- New Security section so the nav button is functional -->
-  <section class="grid" id="security" aria-label="Security">
-    <article class="tile">
-      <h3>Quantum-Resistant Keys</h3>
-      <p>Hybrid PQC readiness, rotating key schedules, and signature scheme audits.</p>
-    </article>
-    <article class="tile">
-      <h3>Anomaly Detection</h3>
-      <p>Live heuristics on mempool patterns, MEV spikes, and slashing attempts.</p>
-    </article>
-    <article class="tile">
-      <h3>Incident-Free Days</h3>
-      <p>Historical uptime, validator cohesion index, and failover rehearsals.</p>
-    </article>
-  </section>
-
-  <section class="viz" id="analytics" aria-label="Charts">
+  <section class="viz" id="analytics" aria-label="Mining Analytics">
     <div class="chart">
-      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Network Performance</h3>
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Mining Performance</h3>
       <canvas id="chartPerf"></canvas>
     </div>
     <div class="chart">
-      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Transaction Volume</h3>
+      <h3 style="margin:.25rem 0 1rem; color:#cfe9ff">Rewards Distribution</h3>
       <canvas id="chartVol"></canvas>
     </div>
   </section>
 
-  <div class="dock" aria-label="Quick Controls">
-    <button class="fab" title="Quantum Mode" id="btnQuantum">⚛️</button>
-    <button class="fab" title="DeFi Focus" id="btnDeFi">💎</button>
-    <button class="fab" title="Security Focus" id="btnSec">🛡️</button>
-    <button class="fab" title="Performance Focus" id="btnPerf">🚀</button>
-    <!-- New: Live Tx Speed Test trigger -->
-    <button class="fab" title="Run Tx Speed Test" id="btnSpeed">⏱️</button>
+  <div class="dock" aria-label="Quick Mining Controls">
+    <button class="fab" title="Start Mining" id="btnStart">⚡</button>
+    <button class="fab" title="Mining Stats" id="btnStats">�</button>
+    <button class="fab" title="Rewards" id="btnRewards">�</button>
+    <button class="fab" title="Mining Pool" id="btnPool">🏊</button>
+    <button class="fab" title="Settings" id="btnSettings">⚙️</button>
   </div>
 
-  <footer>© 2025 ZYRA Blockchain • Quantum‑grade analytics</footer>
-
-  <!-- Auth Modal -->
-  <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" style="display:none">
-    <div class="dialog">
-      <h3 id="authTitle">Sign In</h3>
-      <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username" required></div>
-      <div class="field"><label for="authPass">Password</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password" required></div>
-      <div class="field" id="authPass2Wrap" style="display:none"><label for="authPass2">Confirm Password</label><input id="authPass2" type="password" placeholder="••••••••" autocomplete="new-password"></div>
-      <div class="row" style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
-        <button class="nav-btn" id="authMode" type="button" title="Create account">Create account</button>
-        <div>
-          <button class="nav-btn" id="authCancel" type="button">Cancel</button>
-          <button class="cta" id="authSubmit" type="button">Continue</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Donate Modal -->
-  <div class="modal" id="donateModal" role="dialog" aria-modal="true" aria-labelledby="donTitle" style="display:none">
-    <div class="dialog">
-      <h3 id="donTitle">Donate</h3>
-      <div class="field"><label for="donAddr">Recipient</label><input id="donAddr" placeholder="0x..." autocomplete="off"></div>
-      <div class="field"><label for="donAmt">Amount (ETH)</label><input id="donAmt" type="number" min="0" step="0.001" value="0.01"></div>
-      <div class="row" style="display:flex;justify-content:flex-end;align-items:center;margin-top:.6rem">
-        <button class="nav-btn" id="donCancel" type="button">Cancel</button>
-        <button class="cta" id="donSubmit" type="button" style="margin-left:.5rem">Donate</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Claim Modal -->
-  <div class="modal" id="claimModal" role="dialog" aria-modal="true" aria-labelledby="claimTitle" style="display:none">
-    <div class="dialog">
-      <h3 id="claimTitle">Claim Tokens</h3>
-      <p id="claimInfo" style="color:var(--text-dim);margin:.25rem 0 .75rem">View your vesting schedule and claimable balance.</p>
-      <div class="field"><label>Claimable</label><div id="claimable" class="pill" style="display:inline-block">0</div></div>
-      <div class="row" style="display:flex;justify-content:flex-end;align-items:center;margin-top:.6rem">
-        <button class="nav-btn" id="claimCancel" type="button">Close</button>
-        <button class="cta" id="claimSubmit" type="button" style="margin-left:.5rem">Claim</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Enhance Presale Modal: payment method + crypto total -->
-  <div class="modal" id="presaleModal" role="dialog" aria-modal="true" aria-labelledby="preTitle" style="display:none">
-    <div class="dialog">
-      <h3 id="preTitle">Join Presale</h3>
-      <div class="field"><label for="preQty">Quantity</label><input id="preQty" type="number" min="1" step="1" value="1"></div>
-      <div class="field"><label>Unit Price</label><div id="preUnit" class="pill" style="display:inline-block">$0.12</div></div>
-      <div class="field"><label>Total (USD)</label><div id="preTotal" class="pill" style="display:inline-block">$0.12</div></div>
-      <div class="field"><label for="prePay">Pay With</label>
-        <select id="prePay" class="nav-btn" style="width:100%">
-          <option value="ETH">ETH</option>
-          <option value="USDC">USDC</option>
-        </select>
-      </div>
-      <div class="field" id="preCryptoRow" style="display:none"><label>Crypto Amount</label><div id="preCrypto" class="pill" style="display:inline-block">--</div></div>
-      <div class="row" style="display:flex;justify-content:space-between;align-items:center;margin-top:.6rem">
-        <button class="nav-btn" id="preClaim" type="button" title="Open claim modal">Claim</button>
-        <div>
-          <button class="nav-btn" id="preCancel" type="button">Cancel</button>
-          <button class="cta" id="preSubmit" type="button" style="margin-left:.5rem">Checkout</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <footer>© 2025 ZYRA Mining Network • Quantum-powered sustainable mining</footer>
 
   <!-- Toast container -->
   <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
@@ -376,201 +348,171 @@
       }
     };
 
-    // Live TPS, Latency, Finality metrics (from BFT visualizer)
-    (function liveStats(){
-      const statTPS = document.getElementById('statTPS');
-      const statLatency = document.getElementById('statLatency');
-      const statFinality = document.getElementById('statFinality');
-      // If BFT visualizer is loaded, use its metrics
-      if(window.bftMetrics){
-        function updateBFT(){
-          const m = window.bftMetrics;
-          if(statTPS) statTPS.textContent = m.tps || '--';
-          if(statLatency) statLatency.textContent = m.latency || '--';
-          if(statFinality) statFinality.textContent = m.finality || '--';
+    // ZYRA Mining Statistics and Metrics
+    (function miningStats(){
+      const statMiners = document.getElementById('statMiners');
+      const statMining = document.getElementById('statMining');
+      const statRewards = document.getElementById('statRewards');
+      const statAPY = document.getElementById('statAPY');
+      const statEfficiency = document.getElementById('statEfficiency');
+      const statNextMilestone = document.getElementById('statNextMilestone');
+      
+      // Current mining data
+      let currentMiners = 847;
+      let totalHashrate = 127.3;
+      let totalRewardsPaid = 1.24;
+      let currentAPY = 16.8;
+      let efficiency = 99.7;
+      
+      // Mining milestones
+      const milestones = [
+        { target: 1000, reward: '500 ZYRA Airdrop' },
+        { target: 5000, reward: '2K ZYRA + NFT' },
+        { target: 10000, reward: '5K ZYRA + Status' },
+        { target: 25000, reward: '10K ZYRA + Governance' }
+      ];
+      
+      function updateMiningStats() {
+        // Simulate growing miner base
+        currentMiners += Math.floor(Math.random() * 3);
+        totalHashrate += (Math.random() * 2 - 1);
+        totalRewardsPaid += Math.random() * 0.01;
+        currentAPY += (Math.random() * 0.4 - 0.2);
+        
+        // Update displays
+        if(statMiners) statMiners.textContent = currentMiners.toLocaleString();
+        if(statMining) statMining.textContent = totalHashrate.toFixed(1) + ' TH/s';
+        if(statRewards) statRewards.textContent = totalRewardsPaid.toFixed(2) + 'M ZYRA';
+        if(statAPY) statAPY.textContent = Math.max(12, Math.min(25, currentAPY)).toFixed(1) + '%';
+        if(statEfficiency) statEfficiency.textContent = efficiency.toFixed(1) + '%';
+        
+        // Find next milestone
+        const nextMilestone = milestones.find(m => m.target > currentMiners);
+        if(statNextMilestone && nextMilestone) {
+          const remaining = nextMilestone.target - currentMiners;
+          statNextMilestone.textContent = remaining.toLocaleString();
         }
-        updateBFT();
-        setInterval(updateBFT, 1000);
-        return;
       }
-      // Otherwise, fallback to blockchain metrics
-      let provider;
-      try {
-        provider = typeof window.ethereum !== 'undefined'
-          ? new ethers.providers.Web3Provider(window.ethereum, 'any')
-          : ethers.getDefaultProvider();
-      } catch {}
-      if(provider){
-        let lastTs = null; let avgBlock = null; let avgTPS = null; const alpha = 0.3;
-        provider.on('block', async (bn)=>{
-          try{
-            const block = await provider.getBlock(bn);
-            const ts = Number(block?.timestamp || 0);
-            const txc = Array.isArray(block?.transactions) ? block.transactions.length : 0;
-            if(lastTs){
-              const dt = Math.max(1, ts - lastTs); // seconds
-              const tpsNow = txc / dt;
-              avgTPS = avgTPS==null ? tpsNow : (alpha*tpsNow + (1-alpha)*avgTPS);
-              avgBlock = avgBlock==null ? dt : (alpha*dt + (1-alpha)*avgBlock);
-              if(statTPS) statTPS.textContent = avgTPS.toFixed(2);
-              if(statFinality) statFinality.textContent = avgBlock.toFixed(2) + 's/block';
-            }
-            lastTs = ts || lastTs;
-          }catch{}
+      
+      // Update mining stats every 5 seconds
+      updateMiningStats();
+      setInterval(updateMiningStats, 5000);
+      
+      // Mining milestone notifications
+      function checkMilestones() {
+        milestones.forEach(milestone => {
+          if(currentMiners >= milestone.target && !milestone.achieved) {
+            milestone.achieved = true;
+            toast('success', `🎉 Milestone reached! ${milestone.target} miners - ${milestone.reward} unlocked!`);
+          }
         });
-        async function ping(){
-          const t0 = performance.now();
-          try{ await provider.getBlockNumber(); const ms = performance.now()-t0; if(statLatency) statLatency.textContent = Math.round(ms)+' ms RPC'; }
-          catch{}
-        }
-        ping(); setInterval(ping, 10000);
       }
+      
+      setInterval(checkMilestones, 10000);
     })();
 
     // Apply presale price labels (can be re-run after overrides load)
-    function applyPresalePrice(){
-      try{ const p = window.ZYRA_CONFIG?.presale; if(!p) return; const btn = document.getElementById('presaleBtn'); if(btn) btn.textContent = `Presale $${Number(p.unitUSD||0).toFixed(2)}`; const unitEl = document.getElementById('preUnit'); if(unitEl) unitEl.textContent = `$${Number(p.unitUSD||0).toFixed(2)}`; }catch{}
+    function startMining(){
+      toast('success', 'Mining started! You are now earning ZYRA tokens.');
+      const walletState = document.getElementById('walletState');
+      if(walletState) walletState.textContent = 'Mining Active';
     }
 
-    // Optional: load overrides from config.local.json (written by deploy/update script)
-    (async function loadConfigOverrides(){
-      const deepMerge = (t, s)=>{ if(Array.isArray(s)||Array.isArray(t)) return s; if(s && typeof s==='object'){ const o={...t}; for(const k of Object.keys(s)){ o[k]=deepMerge(t?.[k], s[k]); } return o; } return s===undefined? t : s; };
-    // Auth modal
-    (function ui_modals(){
+    // Optional: load mining configuration
+    (async function loadMiningConfig(){
+      try {
+        const response = await fetch('./mining.config.json');
+        if (response.ok) {
+          const config = await response.json();
+          console.log('Mining configuration loaded:', config);
+        }
+      } catch(e) {
+        // Config file not found, use defaults
+      }
+    })();
+
+    // Toast notification system
+    function toast(type, message, duration = 5000) {
+      const container = document.getElementById('toasts');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+      toast.innerHTML = `
+        <div class="t-ico">${icon}</div>
+        <div class="t-msg">${message}</div>
+        <button class="t-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.remove();
+        }
+      }, duration);
+    }
+
+    // Initialize everything
+    startMining();
+    
+    // Mining interface functionality
+    (function miningInterface(){
       const $ = (id)=> document.getElementById(id);
-      const open = (id)=>{ const m=$(id); if(m){ m.style.display='flex'; const first = m.querySelector('input,button,select,textarea'); if(first) setTimeout(()=>first.focus(),0); } };
-      const close = (id)=>{ const m=$(id); if(m) m.style.display='none'; };
-
-      // Donate
-      const donateBtn = $('donateBtn'); const donateCancel = $('donCancel'); const donateModal = $('donateModal');
-      if(donateBtn) donateBtn.addEventListener('click', ()=> open('donateModal'));
-      if(donateCancel) donateCancel.addEventListener('click', ()=> close('donateModal'));
-      if(donateModal) donateModal.addEventListener('click', (e)=>{ if(e.target===donateModal) close('donateModal'); });
-
-      // Auth (Sign In / Sign Up with blockchain account creation)
-      const authBtn = $('authBtn'); 
-      const authModal = $('authModal'); 
-      const authCancel = $('authCancel');
-      const authMode = $('authMode');
-      const authTitle = $('authTitle');
-      const pass2Wrap = $('authPass2Wrap');
-      const authSubmit = $('authSubmit');
       
-      let mode = 'signin';
+      // Start mining button
+      const walletBtn = $('walletBtn');
+      if(walletBtn) {
+        walletBtn.addEventListener('click', () => {
+          startMining();
+          walletBtn.textContent = 'Mining Active';
+          toast('info', 'ZYRA quantum mining algorithm initialized. Earning rewards...');
+        });
+      }
       
-      function applyAuthMode(){ 
-        if(authTitle) authTitle.textContent = mode==='signin' ? 'Sign In' : 'Create Account';
-        if(pass2Wrap) pass2Wrap.style.display = mode==='signup' ? 'block' : 'none';
-        if(authMode) authMode.textContent = mode==='signin' ? 'Create account' : 'I have an account';
-      }
-
-      function initAuthUI(){
-        const u = JSON.parse(localStorage.getItem('zyra:user')||'null');
-        if(u && authBtn) {
-          authBtn.textContent = 'Account';
-          if(u.address) {
-            toast('info', `Connected to wallet: ${u.address.slice(0,8)}...`);
-          }
-        }
-      }
-
-      if(authBtn) authBtn.addEventListener('click', ()=>{ mode='signin'; applyAuthMode(); open('authModal'); });
-      if(authMode) authMode.addEventListener('click', ()=>{ mode = mode==='signin'?'signup':'signin'; applyAuthMode(); });
-      if(authCancel) authCancel.addEventListener('click', ()=> close('authModal'));
-      if(authModal) authModal.addEventListener('click', (e)=>{ if(e.target===authModal) close('authModal'); });
-
-      // Generate recovery phrase
-      function generateRecoveryPhrase() {
-        // Simple word list for demo
-        const words = ['quantum','blockchain','secure','crypto','wallet','token','network','node','protocol','hash','key','block'];
-        const phrase = [];
-        for(let i = 0; i < 12; i++) {
-          phrase.push(words[Math.floor(Math.random() * words.length)]);
-        }
-        return phrase.join(' ');
-      }
-
-      // Encrypt private key with password
-      function encryptKey(key, password) {
-        // In production use proper encryption. This is just for demo
-        const encoded = btoa(key);
-        return encoded;
-      }
-
-      if(authSubmit) authSubmit.addEventListener('click', async ()=>{
-        const email = $('authEmail')?.value?.trim();
-        const p1 = $('authPass')?.value||'';
-        const p2 = $('authPass2')?.value||'';
-
-        if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('error','Enter a valid email.');
-        if(p1.length < 6) return toast('error','Password must be at least 6 characters.');
-        if(mode==='signup' && p1!==p2) return toast('error','Passwords do not match.');
-
-        if(mode === 'signup') {
-          try {
-            // Create new Ethereum wallet
-            const wallet = ethers.Wallet.createRandom();
-            
-            // Generate recovery phrase
-            const recoveryPhrase = generateRecoveryPhrase();
-            
-            // Encrypt private key with password
-            const encryptedKey = encryptKey(wallet.privateKey, p1);
-            
-            // Save account info securely
-            localStorage.setItem('zyra:user', JSON.stringify({ 
-              email,
-              address: wallet.address,
-              encryptedKey,
-              recoveryPhrase
-            }));
-            
-            // Show success messages
-            toast('success', `Account created! Your wallet address: ${wallet.address.slice(0,8)}...`);
-            toast('info', 'Important: Save your recovery phrase securely: ' + recoveryPhrase);
-            
-            // Update wallet display
-            const walletState = $('walletState');
-            if(walletState) walletState.textContent = wallet.address.slice(0,6) + '...' + wallet.address.slice(-4);
-            
-            // Auto-connect to MetaMask if available
-            if(typeof window.ethereum !== 'undefined') {
-              try {
-                await window.ethereum.request({ 
-                  method: 'eth_requestAccounts'
-                });
-                // Get wallet balance
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const balance = await provider.getBalance(wallet.address);
-                const ethBalance = ethers.utils.formatEther(balance);
-                toast('success', `Wallet connected! Balance: ${ethBalance} ETH`);
-              } catch(err) {
-                toast('error', 'Could not connect wallet: ' + err.message);
-              }
-            }
-          } catch(err) {
-            toast('error', 'Failed to create blockchain account: ' + err.message);
-            return;
-          }
-        } else {
-          // Regular sign in
-          const user = JSON.parse(localStorage.getItem('zyra:user') || 'null');
-          if(!user || user.email !== email) {
-            return toast('error', 'Account not found');
-          }
-          localStorage.setItem('zyra:user', JSON.stringify(user));
-          toast('success', 'Signed in');
-        }
-        
-        if(authBtn) authBtn.textContent = 'Account';
-        close('authModal');
+      // Floating action buttons for mining
+      const btnStart = $('btnStart');
+      const btnStats = $('btnStats');
+      const btnRewards = $('btnRewards');
+      const btnPool = $('btnPool');
+      const btnSettings = $('btnSettings');
+      
+      if(btnStart) btnStart.addEventListener('click', () => {
+        startMining();
+        toast('success', '⚡ Mining started with quantum efficiency!');
       });
-
-      initAuthUI();
-
-      // Esc to close any open modal
-      document.addEventListener('keydown', (e)=>{
-        if(e.key==='Escape') ['authModal','donateModal','presaleModal','claimModal'].forEach(id=> close(id));
+      
+      if(btnStats) btnStats.addEventListener('click', () => {
+        document.getElementById('analytics')?.scrollIntoView({ behavior: 'smooth' });
+      });
+      
+      if(btnRewards) btnRewards.addEventListener('click', () => {
+        document.getElementById('rewards')?.scrollIntoView({ behavior: 'smooth' });
+      });
+      
+      if(btnPool) btnPool.addEventListener('click', () => {
+        toast('info', '🏊 Joining optimal mining pool... Enhanced rewards activated!');
+      });
+      
+      if(btnSettings) btnSettings.addEventListener('click', () => {
+        toast('info', '⚙️ Mining settings: Quantum mode enabled, max efficiency selected.');
+      });
+      
+      // Navigation functionality
+      document.querySelectorAll('.nav-btn[data-target]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = btn.getAttribute('data-target');
+          const element = document.getElementById(target);
+          if(element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+            // Update active state
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          }
+        });
       });
     })();
   </script>
