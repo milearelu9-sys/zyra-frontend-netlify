@@ -1,1 +1,14 @@
-
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.zyra.mining",
+      "sha256_cert_fingerprints": [
+        "47:ED:D3:9E:82:16:E4:3C:AB:4D:96:E4:A5:11:75:8E:48:EB:E9:AB:C5:E1:71:80:84:1E:E1:F9:32:A8:05:2A"
+      ]
+    }
+  }
+]
